@@ -29,6 +29,18 @@ def argParser():
 output_data = {}
 
 
+def get_discoverd_data():
+    '''Gather ironic-discoverd output from Swift.'''
+    result = {}
+    os.putenv('OS_TENANT_NAME', 'service')
+    for name in os.popen("swift list ironic-discoverd").readlines():
+        cmd = ('swift', 'download', '--output', '-', 'ironic-discoverd', name)
+        object = os.popen(cmd).read()
+        result[name] = object
+        print name, object
+    return result
+
+
 class CustomHandler(ansible.callbacks.PlaybookRunnerCallbacks):
     def __init__(self, stats=None):
         print 'init'
@@ -79,6 +91,10 @@ def main():
     print('output_data: %s' % output_data)
     for key in output_data.keys():
         print('host: %s: %s' % (key, output_data[key]))
+
+
+    discoverd_data = get_discoverd_data()
+    print('ironic-discoverd data: %s' % discoverd_data)
 
 
 if __name__ == "__main__":
