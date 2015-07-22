@@ -53,8 +53,7 @@ def get_discoverd_data():
         cmd = ('swift', 'download', '--output', '-', 'ironic-discoverd', name)
         code, object, stderr = run(cmd, env)
         assert code == 0
-        result[name] = object
-        print name, object
+        result[name] = json.loads(object)
     return result
 
 
@@ -110,7 +109,9 @@ def main():
         print('host: %s: %s' % (key, output_data[key]))
 
     discoverd_data = get_discoverd_data()
-    print('ironic-discoverd data: %s' % discoverd_data)
+    print 'Ironic discoverd data:'
+    for hwid, data in discoverd_data.items():
+        print hwid, data
 
 
 if __name__ == "__main__":
