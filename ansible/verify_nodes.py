@@ -34,8 +34,10 @@ def run(cmd, env):
 
     Returns tuple: (return code, stdout, stderr).
     '''
+    e = os.environ.copy()
+    e.update(env)
     process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                               stderr=subprocess.PIPE, env=env)
+                               stderr=subprocess.PIPE, env=e)
     stdout, stderr = process.communicate()
     return_code = process.wait()
     return (return_code, stdout, stderr)
@@ -46,7 +48,11 @@ def get_discoverd_data():
     result = {}
     env = {'OS_TENANT_NAME': 'service'}
     code, stdout, stderr = run(('swift', 'list', 'ironic-discoverd'), env)
-    assert code == 0
+    if code != 0:
+        print "ERROR: %s" % code
+        print stdout
+        print stderr
+        sys.exit(1)
     for name in stdout.splitlines():
         cmd = ('swift', 'download', '--output', '-', 'ironic-discoverd', name)
         code, object, stderr = run(cmd, env)
