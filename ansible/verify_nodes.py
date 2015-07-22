@@ -4,6 +4,7 @@
 
 import argparse
 import pprint
+import subprocess
 import sys
 import os
 import json
@@ -28,14 +29,28 @@ def argParser():
 
 output_data = {}
 
+def run(cmd, env):
+    '''Run a process in the given environment.
+
+    Returns tuple: (return code, stdout, stderr).
+    '''
+    process = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                               stderr=subprocess.PIPE, env=env)
+    stdout, stderr = process.communicate()
+    return_code = process.wait()
+    return (return_code, stdout, stderr)
+
 
 def get_discoverd_data():
     '''Gather ironic-discoverd output from Swift.'''
     result = {}
-    os.putenv('OS_TENANT_NAME', 'service')
-    for name in os.popen("swift list ironic-discoverd").readlines():
+    env = {'OS_TENANT_NAME': 'service'}
+    code, stdout, stderr = run(('swift', 'list', 'ironic-discoverd', env))
+    assert code == 0
+    for name in stdout.splitlines():
         cmd = ('swift', 'download', '--output', '-', 'ironic-discoverd', name)
-        object = os.popen(cmd).read()
+        code, object, stderr = run(cmd, env)
+        assert code == 0
         result[name] = object
         print name, object
     return result
