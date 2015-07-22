@@ -36,13 +36,9 @@ class CustomHandler(ansible.callbacks.PlaybookRunnerCallbacks):
 
     def on_ok(self, host, host_result):
         global output_data
-        #print('host: %s' % host)
-        #print('host_result: %s' % host_result)
         if host not in output_data:
             output_data[host] = []
         output_data[host].append(host_result)
-        #output_data['asdf'] = 1
-        #print 'output_data: %s' % output_data
 
 
 def main():
