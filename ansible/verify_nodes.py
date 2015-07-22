@@ -45,7 +45,7 @@ def get_discoverd_data():
     '''Gather ironic-discoverd output from Swift.'''
     result = {}
     env = {'OS_TENANT_NAME': 'service'}
-    code, stdout, stderr = run(('swift', 'list', 'ironic-discoverd', env))
+    code, stdout, stderr = run(('swift', 'list', 'ironic-discoverd'), env)
     assert code == 0
     for name in stdout.splitlines():
         cmd = ('swift', 'download', '--output', '-', 'ironic-discoverd', name)
