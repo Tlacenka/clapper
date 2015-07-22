@@ -92,7 +92,6 @@ def main():
     for key in output_data.keys():
         print('host: %s: %s' % (key, output_data[key]))
 
-
     discoverd_data = get_discoverd_data()
     print('ironic-discoverd data: %s' % discoverd_data)
 
