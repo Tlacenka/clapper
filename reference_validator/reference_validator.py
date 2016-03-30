@@ -65,17 +65,19 @@ class YAML_HotValidator:
                     self.environments.insert(0, self.YAML_Env(None, abs_path))
 
     class YAML_Types:
-        ''' Enumerated reference get_ functions + properties:parameters reference '''
+        ''' Enumerated reference get_ functions + properties:parameters reference. '''
+
         RESOURCE  = 1 # get_resource
         PARAMETER = 2 # get_param
         ATTRIBUTE = 3 # get_attr
         PROPERTY  = 4 # parameter in file B does not have corresponding property in file A
 
     class YAML_Hotfile:
-        ''' Class with attributes needed for work with HOT files '''
+        ''' Class with attributes needed for work with HOT files. '''
 
         def __init__(self, parent_node, abs_path):
-            ''' Node is initiated when being detected '''
+            ''' Node is initiated when being detected. '''
+
             self.path = abs_path
 
             self.parent = parent_node   # Parent node or nothing in the case of root node
@@ -91,7 +93,7 @@ class YAML_HotValidator:
             self.invalid = []           # list of invalid references (YAML_Reference)
 
         def validate_file(self, curr_nodes, templates, environments, curr_path):
-            ''' Validates YAML file'''
+            ''' Validates YAML file. '''
 
             # Add current node at the beginning
             curr_nodes.insert(0, self)
@@ -282,7 +284,7 @@ class YAML_HotValidator:
                     elif ele in (root.keys() if type(root) == dict else root): # ERROR due to embedded get_param
                         root = root[ele]
                     # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
-                    elif (('default' in root) and 
+                    elif (('default' in root) and
                         (self.structure['parameters'][hierarchy[0]]['type'] == 'json')):
                         root = root['default']
                     else:
@@ -297,8 +299,8 @@ class YAML_HotValidator:
 
 
         def check_prop_par(self, parent, resource, environments):
-            ''' Check properties against parameters and vice versa, tag used. '''         
-    
+            ''' Check properties against parameters and vice versa, tag used. '''
+
             # Check if parameters have default or value from props
             for par in self.params.keys():
                 flag = False
@@ -310,12 +312,12 @@ class YAML_HotValidator:
                             flag = True
                 else:
                     flag = True
-    
+
                 if not flag:
                     self.invalid.append(YAML_HotValidator.YAML_Reference(par, resource.name,
                                         YAML_HotValidator.YAML_Types.PROPERTY, parent.path))
                     self.ok = False
-    
+
             # Check used properties
             for prop in resource.properties.keys():
                 if prop in self.params.keys():
@@ -323,7 +325,7 @@ class YAML_HotValidator:
 
 
     class YAML_Env:
-        ''' Class with attributes needed for work with environment files '''
+        ''' Class with attributes needed for work with environment files. '''
 
         def __init__(self, parent_node, abs_path):
             self.path = abs_path
@@ -342,25 +344,29 @@ class YAML_HotValidator:
             self.ok = True
 
     class YAML_Resource:
-        ''' Stores useful info about resource, its structure '''
+        ''' Stores useful info about resource, its structure. '''
         def __init__(self, name, resource_struct):
 
             self.type = resource_struct['type']
-            self.child = None
-            self.name = name
+            self.child = None    # child node
+            self.name = name     # name of resource variable
             self.properties = {}
-            self.isGroup = False
+
+            self.isGroup = False # is it a group type?
+            self.grouptype = ''  # OS::Heat::AutoScalingGroup or ResourceGroup
 
             keys = []
-            
+
             # If there are properties, save them
             if 'properties' in resource_struct:
                 # Type and properties of the individual resource
                 if self.type == 'OS::Heat::AutoScalingGroup':
+                    self.grouptype = self.type;
                     self.type = resource_struct['properties']['resource']['type']
                     keys = list(resource_struct['properties']['resource']['properties'].keys())
                     self.isGroup = True
                 elif self.type == 'OS::Heat::ResourceGroup':
+                    self.grouptype = self.type;
                     self.type = resource_struct['properties']['resource_def']['type']
                     keys = list(resource_struct['properties']['resource_def']['properties'].keys())
                     self.isGroup = True
@@ -373,7 +379,8 @@ class YAML_HotValidator:
             self.used = False
 
     class YAML_Reference:
-        ''' Saves all invalid references for output. In YAML_Hotfile '''
+        ''' Saves all invalid references for output. In YAML_Hotfile. '''
+
         def __init__(self, referent, element, ref_type, parent):
             self.referent = referent # name of referred element
             self.element = element   # in which resource was reference realized
@@ -381,6 +388,7 @@ class YAML_HotValidator:
             self.parent = parent     # used in property reference
 
     def load_environments(self):
+        ''' Goes through all environment files, saves information about them. '''
 
         # Add all root environment nodes for validation
         self.curr_nodes.append(self.environments)
@@ -402,7 +410,7 @@ class YAML_HotValidator:
                     if type(custom) == str:
                         env_node.resource_registry[origin] = custom
                     elif origin == 'resources':
-                        # Find if there is any mapping (hooks etc are not important)                        
+                        # Find if there is any mapping (hooks etc are not important)
                         for res in env_node.structure['resource_registry']['resources'].keys():
                             for key, value in six.iteritems(env_node.structure['resource_registry']['resources'][res]):
                                 # Add indirect mapping using regexp - multiple indentations
@@ -424,6 +432,7 @@ class YAML_HotValidator:
                     ((type(child) == list) and child[0].endswith('.yaml'))):
 
                     # Is a file is created already as a root, no need for redundancy
+                    # TODO Check for different directory but same filename
                     found = False
                     for m in self.mappings:
                         if ((m.path == child) and (m.parent in self.environments)):
@@ -436,7 +445,7 @@ class YAML_HotValidator:
                         self.mappings.append(env_node.children[0])
 
     def load_mappings(self):
-        ''' Add all files mapped to resources as children in parent node '''
+        ''' Add all files mapped to resources as children in parent node. '''
 
         for hot in self.templates + self.mappings:
             for res in hot.resources:
@@ -464,7 +473,7 @@ class YAML_HotValidator:
 
 
     def validate_env_params(self):
-        ''' Checks parameters section of environment files '''
+        ''' Checks parameters section of environment files. '''
 
         # Check parameters section
         for env in self.environments:
@@ -486,7 +495,7 @@ class YAML_HotValidator:
 
 
     def validate_properties(self, template):
-        ''' Validate properties x parameters in tree of templates '''
+        ''' Validate properties x parameters in tree of templates. '''
 
         # Go through all resources in current template
         for resource in template.resources:
@@ -578,12 +587,12 @@ class YAML_HotValidator:
         # HOT Files and mappings
         rev_templates = list(reversed(self.templates))
         for hot in [x for x in [rev_templates, list(reversed(self.mappings))] if len(x)]:
-            if self.pretty_format: 
+            if self.pretty_format:
                 print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE + ('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:') +
                       YAML_colours.DEFAULT)
             else:
                 print(('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:'))
-            
+
             # Print total
             if self.pretty_format:
                 print(YAML_colours.BOLD + 'Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)) +
@@ -600,13 +609,31 @@ class YAML_HotValidator:
                           node.path + YAML_colours.DEFAULT)
                 else:
                     print('File ' + node.path)
-                
+
                 # Print parent node for better navigation
                 if self.pretty_format:
-                    print(YAML_colours.BOLD + 'Parent: ' + YAML_colours.DEFAULT + (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
+                    print(YAML_colours.BOLD + 'Parent: ' + YAML_colours.DEFAULT +
+                          (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 else:
                     print('Parent: ' + (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 print('')
+
+                # Print children nodes
+
+                if [True for x in node.resources if x.child is not None]:
+                    if self.pretty_format:
+                        print(YAML_colours.BOLD + 'Children:' + YAML_colours.DEFAULT)
+                    else:
+                        print('Children:')
+
+                    for res in node.resources:
+                        if res.child is not None:
+                            if self.pretty_format:
+                                print('- ' + YAML_colours.YELLOW + res.child.path +
+                                    YAML_colours.DEFAULT)
+                            else:
+                                print('- ' + res.child.path)
+                    print('')
 
                 # Invalid references
                 if node.invalid:
@@ -636,7 +663,7 @@ class YAML_HotValidator:
 
                         elif ref.type == self.YAML_Types.ATTRIBUTE:
                             if self.pretty_format:
-                                print ('Instance ' + YAML_colours.YELLOW + ref.referent + 
+                                print ('Instance ' + YAML_colours.YELLOW + ref.referent +
                                        YAML_colours.DEFAULT + ' referred by ' + YAML_colours.YELLOW +
                                        'get_attr' + YAML_colours.DEFAULT + ' in ' + YAML_colours.YELLOW +
                                        ref.element + YAML_colours.DEFAULT + ' is not declared.')
@@ -647,8 +674,8 @@ class YAML_HotValidator:
                         elif ref.type == self.YAML_Types.PROPERTY:
                             if self.pretty_format:
                                 print('Parameter ' + YAML_colours.YELLOW + ref.referent + YAML_colours.DEFAULT +
-                                      ' has no corresponding default or property in ' +  YAML_colours.YELLOW + 
-                                      ref.element + YAML_colours.DEFAULT + ' in ' + 
+                                      ' has no corresponding default or property in ' +  YAML_colours.YELLOW +
+                                      ref.element + YAML_colours.DEFAULT + ' in ' +
                                       YAML_colours.YELLOW + os.path.relpath(ref.parent, self.init_dir) + YAML_colours.DEFAULT + '.')
                             else:
                                 print('Parameter ' + ref.referent + ' has no corresponding default or property in' +
@@ -733,7 +760,7 @@ class YAML_HotValidator:
 
 
 def main():
-    
+
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-u', '--unused', action='store_true',
