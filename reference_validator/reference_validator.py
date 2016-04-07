@@ -9,6 +9,7 @@ import pprint
 import re
 import sys
 import six  # compatibility
+import time
 import yaml # pip install pyyaml
 
 # only for Python 2.x
@@ -823,6 +824,7 @@ def main():
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
 
     # Load environments to get mappings
     validator.load_environments()
@@ -839,6 +841,7 @@ def main():
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
 
     # Load HOTs: change to its directory, validate -f
     validator.templates[0].load_file(validator.curr_nodes, validator.templates,
@@ -848,6 +851,7 @@ def main():
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
 
     # Also add mapped files as children once there is a full structure of files
     validator.add_mappings()
@@ -857,6 +861,7 @@ def main():
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
 
     # Check properties x parameters
     validator.validate_properties(validator.templates[-1])
@@ -867,12 +872,14 @@ def main():
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
 
     # Validate references
     validator.validate_references(validator.templates[-1])
 
     if validator.print_nyan:
         progress.task_done()
+        time.sleep(1)
         progress.finish()
 
     # Print results
