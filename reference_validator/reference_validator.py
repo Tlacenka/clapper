@@ -95,9 +95,10 @@ class YAML_HotValidator:
             self.children = []          # Ordered children - by the moment of appearance in the code
 
             self.resources = []         # YAML_Resource list
-            self.params = {}            # list of YAML_ParProp
+            self.params = []            # list of YAML_ParProp
                                         # TODO exception for root template when checking properties values
-            self.outputs = []           # TODO list of {name : <structure>}
+
+            self.outputs = {}           # {name : <value structure>}
 
             self.structure = {}         # structure of YAML file
             self.ok = True
@@ -119,11 +120,10 @@ class YAML_HotValidator:
                 print('File ' + self.path + ' could not be opened.')
                 sys.exit(1)
 
-            # Save all parameters names and resources + properties
-            # TODO remove
+            # Save all parameters names, resources and properties
             if 'parameters' in self.structure:
-                for param in list(self.structure['parameters'].keys()):
-                    self.params[param] = False
+                for param in self.structure['parameters'].items():
+                    self.params.append(YAML_HotValidator.YAML_Prop_Par(param, True))
 
             # Save name and structure of each resource
             if 'resources' in self.structure:
@@ -134,7 +134,7 @@ class YAML_HotValidator:
             # Save outputs
             if 'outputs' in self.structure:
                 for out in self.structure['outputs']:
-                    self.outputs.append(out)
+                    self.outputs[out] = self.structure['outputs'][out]
 
             # Examine children nodes to get the full information about references
             for resource in self.resources:
@@ -224,28 +224,22 @@ class YAML_HotValidator:
                         # Add it to invalid references
                             self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
                                             YAML_HotValidator.YAML_Types.GET_PARAM, None))
-
-    #                    if (self.pretty_format):
-    #                        print ('Parameter ' + YAML_colours.YELLOW + ret[1] + YAML_colours.DEFAULT +
-    #                        ' of instance ' + YAML_colours.YELLOW + value[0] + YAML_colours.DEFAULT +
-    #                        ' referred in ' + YAML_colours.YELLOW + name + YAML_colours.DEFAULT +
-    #                        ' is not declared.', file=sys.stderr)
-    #                    else:
-    #                        print ('Parameter ' + ret[1] + ' of instance ' + value[0] + ' referred in ' +
-    #                                name + ' is not declared.', file=sys.stderr)
                             self.ok = False
                 else:
                     # Check if it is a pseudoparameter
                     if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
-                        if value not in list(self.params.keys()):
+                        if value not in [x.name for x in self.params]:
 
                             # Add it to invalid references
                             self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
                                                 YAML_HotValidator.YAML_Types.GET_PARAM, None))
                             self.ok = False
 
-                        elif (self.params[value] == False):
-                           self.params[value] = True
+                        else:
+                            # Changes usage flag
+                            par = [x for x in self.params if x.name == value][0]
+                            if par.used == False:
+                                par.used = True
 
             elif section == YAML_HotValidator.YAML_Types.GET_ATTR: # TDO add check for hierarchy
                 if type(value) == list:
@@ -275,11 +269,11 @@ class YAML_HotValidator:
                                 # outputs_list used in case of autoscaling group TODO ASG x RG
                                 if ((len(hierarchy) >= 3) and r.isGroup and
                                     (hierarchy[1] == 'outputs_list') and
-                                    (hierarchy[2] in f.outputs)):
+                                    (hierarchy[2] in f.outputs.keys())):
                                     flag = True
 
                                 # mapped to outputs
-                                elif ((len(hierarchy) >= 2) and (hierarchy[1] in f.outputs)):
+                                elif ((len(hierarchy) >= 2) and (hierarchy[1] in f.outputs.keys())):
                                     flag = True
 
                                 #resource.<name> used
@@ -326,28 +320,37 @@ class YAML_HotValidator:
         def check_prop_par(self, parent, resource, environments):
             ''' Check properties against parameters and vice versa, tag used. '''
 
-            # Check if parameters have default or value from props
-            for par in self.params.keys():
-                flag = False
-                if ((par not in resource.properties.keys()) and
-                    (not 'default' in self.structure['parameters'][par])):
-                    for env in environments:
-                        if par in list(env.params_default.keys()):
-                            env.params_default[par] = True
-                            flag = True
-                else:
-                    flag = True
+            # Get difference in names of properties and parameters
+            differences = list(set([x.name for x in self.params]) ^ set([y.name for y in resource.properties]))
 
-                if not flag:
-                    self.invalid.append(YAML_HotValidator.YAML_Reference(par, resource.name,
-                                        YAML_HotValidator.YAML_Types.MISS_PROP, parent.path))
+            for diff in differences:
+                # Missing property for parameter
+                if diff in [x.name for x in self.params]:
+                    if [True for x in self.params if (x.name == diff) and (x.default is None)]:
+                        self.invalid.append(YAML_HotValidator.YAML_Reference(diff, resource.name,
+                                            YAML_HotValidator.YAML_Types.MISS_PROP, parent.path))
+                        self.ok = False
+                # Missing parameter for property
+                elif diff in [x.name for x in resource.properties]:
+                    self.invalid.append(YAML_HotValidator.YAML_Reference(diff, resource.name,
+                                        YAML_HotValidator.YAML_Types.MISS_PARAM, self.path))
                     self.ok = False
 
-            # Check if properties have a corresponding parameter
-            for prop in resource.properties.keys():
-                if prop not in self.params.keys():
-                    self.invalid.append(YAML_HotValidator.YAML_Reference(prop, resource.name,
-                                        YAML_HotValidator.YAML_Types.MISS_PARAM, self.path))
+            # Get all matches
+            # TODO: Would some kind of substraction of differences from appended lists be faster?
+            #       Or smth that gets pointers to objects, not just names
+            matches = list(set([x.name for x in self.params]) & set([y.name for y in resource.properties]))
+
+            # Share YAML_Prop_Par for each match
+            for m in matches:
+                # Finds parameter and property
+                prop = [x for x in resource.properties if x.name == m][0]
+                par = [y for y in self.params if y.name == m][0]
+
+                # Merges their attributes, prop and param share one object from now on
+                merged = prop.merge(par)
+                prop = merged
+                par = merged
 
 
     class YAML_Env:
@@ -377,15 +380,15 @@ class YAML_HotValidator:
             self.type = resource_struct['type']
             self.child = None    # child node
             self.name = name     # name of resource variable
-            self.properties = {} # TODO list of YAML_ParProp
+            self.properties = [] # list of YAML_ParProp
 
-            self.isGroup = False # is it a group type?
+            self.isGroup = False # is it a group type
             self.grouptype = ''
 
             if self.type in ['OS::Heat::AutoScalingGroup', 'OS::Heat::ResourceGroup']:
                 self.isGroup = True
 
-            keys = []
+            props = []
 
             # If there are properties, save them
             # TODO save to YAML_Prop_Par, merge ASG and RG with ternary operator
@@ -395,13 +398,12 @@ class YAML_HotValidator:
                     self.grouptype = self.type;
                     self.type = resource_struct['properties']['resource' if
                                 self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['type']
-                    keys = list(resource_struct['properties']['resource' if
-                                self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['properties'].keys())
+                    for prop in resource_struct['properties']['resource' if
+                                self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['properties'].items():
+                        self.properties.append(YAML_HotValidator.YAML_Prop_Par(prop, False))
                 else:
-                    keys = list(resource_struct['properties'].keys())
-
-                for key in keys:
-                    self.properties[key] = False
+                    for prop in resource_struct['properties'].items():
+                        self.properties.append(YAML_HotValidator.YAML_Prop_Par(prop, False))
 
             self.used = False
 
@@ -410,11 +412,29 @@ class YAML_HotValidator:
         ''' Class for saving information about parameters and properties.
             Each parameter and its corresponding property share one. '''
 
-        def __init__(self, structure):
-            self.name = structure.keys()[0]    # name of parameter/property
-            self.used = False                  # flag of usage
-            self.value = structure.values()[0] # value (possibly structured)
+        def __init__(self, structure, isPar):
+            self.name = structure[0]    # name of parameter/property
+            self.used = False                  # flag of usage (reference)
+            self.value = None if isPar else structure[1] # value (possibly structured)
+            self.default = None
+            if isPar and ('default' in structure[1]):
+                self.default = structure[1]['default']
 
+        def merge(self, obj):
+            ''' Merges 2 objects, uses attributes of the second object if they are defined. '''
+
+            # Objects must have the same name
+            if self.name != obj.name:
+                return
+
+            self.used = self.used or obj.used
+
+            if obj.value is not None:
+                self.value = obj.value
+
+            if obj.default is not None:
+                self.default = obj.default
+            
 
     class YAML_Reference:
         ''' Saves all invalid references for output. In YAML_Hotfile. '''
@@ -528,11 +548,11 @@ class YAML_HotValidator:
         for env in self.environments:
             for par in list(env.params_default.keys()):
                 for hot in self.templates:
-                    if par in list(hot.params.keys()):
+                    if par in [x.name for x in hot.params]:
                         env.params_default[par] = True
                         break
                 for hot in self.mappings:
-                    if par in list(hot.params.keys()):
+                    if par in [x.name for x in hot.params]:
                         env.params_default[par] = True
                         break
 
@@ -751,18 +771,18 @@ class YAML_HotValidator:
                     print('')
 
                 # Unused parameters (optional) ??
-                if self.print_unused and (False in node.params.values()):
+                if self.print_unused and (False in [x.used for x in node.params]):
                     if self.pretty_format:
                         print(YAML_colours.BOLD +  'Unused parameters:' + YAML_colours.DEFAULT)
                     else:
                         print('Unused parameters:')
 
-                    for key, value in six.iteritems(node.params):
-                        if value == False:
+                    for par in node.params:
+                        if par.used == False:
                             if self.pretty_format:
-                                print('- ' + YAML_colours.YELLOW + key + YAML_colours.DEFAULT)
+                                print('- ' + YAML_colours.YELLOW + par.name + YAML_colours.DEFAULT)
                             else:
-                                print('- ' + key)
+                                print('- ' + par.name)
                     print('')
 
                 # Print unused resources (optional)
@@ -817,17 +837,18 @@ def main():
     # Initialize validator
     validator = YAML_HotValidator(vars(parser.parse_args()))
 
+    # Initialize nyanbar
     if validator.print_nyan:
         progress = nyanbar.NyanBar(tasks=6)
 
     # Run validator
 
+    # Load environments to get mappings
+    validator.load_environments()
+
     if validator.print_nyan:
         progress.task_done()
         time.sleep(1)
-
-    # Load environments to get mappings
-    validator.load_environments()
 
     # Load HOTs in mappings
     # All mappings are at the beginning, followed by children nodes
@@ -854,6 +875,7 @@ def main():
         time.sleep(1)
 
     # Also add mapped files as children once there is a full structure of files
+    # (if done earlier, some mapped types used in mapped files could be skipped)
     validator.add_mappings()
 
     # Check environment parameters against fully loaded HOT structure
