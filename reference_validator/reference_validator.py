@@ -11,6 +11,10 @@ import sys
 import six  # compatibility
 import yaml # pip install pyyaml
 
+# only for Python 2.x
+if sys.version_info[0] == 2:
+    import nyanbar
+
 
 class YAML_colours:
         ''' Code for colouring output '''
@@ -49,6 +53,7 @@ class YAML_HotValidator:
         # Applied parameters
         self.print_unused = arguments['unused']
         self.pretty_format = arguments['pretty_format']
+        self.print_nyan = (sys.version_info[0] == 2) and arguments['nyan']
         self.printer = pprint.PrettyPrinter(indent=2)
 
         # Check HOT file (-f)
@@ -99,7 +104,7 @@ class YAML_HotValidator:
             self.invalid = []           # list of invalid references (YAML_Reference)
 
 
-        def validate_file(self, curr_nodes, templates, environments, curr_path):
+        def load_file(self, curr_nodes, templates, environments, curr_path):
             ''' Validates YAML file. '''
 
             # Add current node at the beginning
@@ -140,12 +145,21 @@ class YAML_HotValidator:
                     resource.child = templates[0]
 
                     # Start validating child
-                    templates[0].validate_file(curr_nodes, templates, environments,
+                    templates[0].load_file(curr_nodes, templates, environments,
                                                os.path.join(curr_path, os.path.dirname(self.path)))
 
-                    # Whole subtree with root = current node is validated
+                    # The whole subtree with root = current node is loaded
 
-            # TODO Move, save for after checking properties and parameters
+            # Remove node from current nodes after loading
+            curr_nodes.remove(self)
+
+
+        def validate_file(self, curr_nodes):
+            ''' After loading information, validates references in file.'''
+
+            # Add current node at the beginning
+            curr_nodes.insert(0, self)
+
             # Iterate over sections (all children validated by now)
             for section, instances in six.iteritems(self.structure):
                 # skip those without nested structures
@@ -157,6 +171,7 @@ class YAML_HotValidator:
 
             # Remove node from current nodes after validation
             curr_nodes.remove(self)
+
 
         def inspect_instances(self, properties, name):
             ''' Check if all references to variables are valid.
@@ -171,16 +186,16 @@ class YAML_HotValidator:
                 # Check references, mark used variables
                 for key, value in six.iteritems(properties):
                     if key == 'get_param':
-                        self.check_validity(value, name, YAML_HotValidator.YAML_Types.GET_PARAM)
+                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_PARAM)
                     elif key == 'get_resource':
-                        self.check_validity(value, name, YAML_HotValidator.YAML_Types.GET_RESOURCE)
+                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_RESOURCE)
                     elif key == 'get_attr':
-                        self.check_validity(value, name, YAML_HotValidator.YAML_Types.GET_ATTR)
+                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_ATTR)
                     else:
                         self.inspect_instances(value, name)
 
 
-        def check_validity(self, value, name, section):
+        def check_instance_validity(self, value, name, section):
             ''' Check if all declared variables have been used.
                 value   - referred variable
                 name    - name of referring instance
@@ -364,23 +379,23 @@ class YAML_HotValidator:
             self.properties = {} # TODO list of YAML_ParProp
 
             self.isGroup = False # is it a group type?
-            self.grouptype = ''  # OS::Heat::AutoScalingGroup or ResourceGroup
+            self.grouptype = ''
+
+            if self.type in ['OS::Heat::AutoScalingGroup', 'OS::Heat::ResourceGroup']:
+                self.isGroup = True
 
             keys = []
 
             # If there are properties, save them
+            # TODO save to YAML_Prop_Par, merge ASG and RG with ternary operator
             if 'properties' in resource_struct:
                 # Type and properties of the individual resource
-                if self.type == 'OS::Heat::AutoScalingGroup':
+                if self.isGroup:
                     self.grouptype = self.type;
-                    self.type = resource_struct['properties']['resource']['type']
-                    keys = list(resource_struct['properties']['resource']['properties'].keys())
-                    self.isGroup = True
-                elif self.type == 'OS::Heat::ResourceGroup':
-                    self.grouptype = self.type;
-                    self.type = resource_struct['properties']['resource_def']['type']
-                    keys = list(resource_struct['properties']['resource_def']['properties'].keys())
-                    self.isGroup = True
+                    self.type = resource_struct['properties']['resource' if
+                                self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['type']
+                    keys = list(resource_struct['properties']['resource' if
+                                self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['properties'].keys())
                 else:
                     keys = list(resource_struct['properties'].keys())
 
@@ -413,9 +428,6 @@ class YAML_HotValidator:
     def load_environments(self):
         ''' Goes through all environment files, saves information about them. '''
 
-        # Add all root environment nodes for validation
-        self.curr_nodes.append(self.environments)
-
         if not self.environments:
             return
 
@@ -426,6 +438,9 @@ class YAML_HotValidator:
             except IOError:
                 print('File ' + env_node.path + ' could not be opened.')
                 sys.exit(1)
+
+            # Add to currently validated files
+            self.curr_nodes.insert(0, env_node)
 
             # Save mappings
             if 'resource_registry' in env_node.structure:
@@ -466,9 +481,13 @@ class YAML_HotValidator:
                         env_node.children.insert(0, self.YAML_Hotfile(env_node, child))
                         self.mappings.append(env_node.children[0])
 
+            # Remove from currently validated files
+            self.curr_nodes.remove(env_node)
 
-    def load_mappings(self):
+
+    def add_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
+        # TODO regexp mappings
 
         for hot in self.templates + self.mappings:
             for res in hot.resources:
@@ -520,6 +539,9 @@ class YAML_HotValidator:
     def validate_properties(self, template):
         ''' Validate properties x parameters in tree of templates. '''
 
+        # Add current node at the beginning
+        self.curr_nodes.insert(0, self)
+
         # Go through all resources in current template
         for resource in template.resources:
             # Continue with child nodes
@@ -527,6 +549,24 @@ class YAML_HotValidator:
                 resource.child.check_prop_par(template, resource, self.environments)
                 self.validate_properties(resource.child)
 
+        # Remove node from current nodes after validation
+        self.curr_nodes.remove(self)
+
+
+    def validate_references(self, root):
+        ''' Validates references in file '''
+
+        # Validate parent
+        root.validate_file(self.curr_nodes)
+
+        # Go through all resources in current template
+        for resource in root.resources:
+            # Continue with child nodes
+            if resource.child is not None:
+                resource.child.validate_file(self.curr_nodes)
+                self.validate_references(resource.child)
+
+        
 
     def print_output(self):
         ''' Prints results of validation for all files + additional info. '''
@@ -770,36 +810,53 @@ def main():
                         help='Environment files to be used.')
     parser.add_argument('-f', '--file', metavar='path/to/file',
                         help='HOT file to be used.')
+    parser.add_argument('-n', '--nyan', action='store_true',
+                        help='When true, prints nyanbar.')
 
     # Initialize validator
     validator = YAML_HotValidator(vars(parser.parse_args()))
 
+    if validator.print_nyan:
+        progress = nyanbar.NyanBar(tasks=6)
+
     # Run validator
+
+    if validator.print_nyan:
+        progress.task_done()
 
     # Load environments to get mappings
     validator.load_environments()
 
-    # Validate HOTs in mappings
+    # Load HOTs in mappings
     # All mappings are at the beginning, followed by children nodes
     for hot in list(reversed(validator.mappings)):
         if hot.parent in validator.environments:
-            hot.validate_file(validator.curr_nodes, validator.mappings,
+            hot.load_file(validator.curr_nodes, validator.mappings,
                               validator.environments, os.path.join(validator.init_dir,
                               os.path.dirname(hot.parent.path)))
         else:
             break
 
-    # Validate HOTs: change to its directory, validate -f
-    validator.templates[0].validate_file(validator.curr_nodes, validator.templates,
+    if validator.print_nyan:
+        progress.task_done()
+
+    # Load HOTs: change to its directory, validate -f
+    validator.templates[0].load_file(validator.curr_nodes, validator.templates,
                                          validator.environments,
                                          os.path.join(validator.init_dir,
                                          os.path.dirname(validator.templates[0].path)))
 
+    if validator.print_nyan:
+        progress.task_done()
+
     # Also add mapped files as children once there is a full structure of files
-    validator.load_mappings()
+    validator.add_mappings()
 
     # Check environment parameters against fully loaded HOT structure
     validator.validate_env_params()
+
+    if validator.print_nyan:
+        progress.task_done()
 
     # Check properties x parameters
     validator.validate_properties(validator.templates[-1])
@@ -807,6 +864,16 @@ def main():
     for hot in list(reversed(validator.mappings)):
         if hot.parent in validator.environments:
             validator.validate_properties(hot)
+
+    if validator.print_nyan:
+        progress.task_done()
+
+    # Validate references
+    validator.validate_references(validator.templates[-1])
+
+    if validator.print_nyan:
+        progress.task_done()
+        progress.finish()
 
     # Print results
     validator.print_output()

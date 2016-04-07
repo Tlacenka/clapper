@@ -7,6 +7,7 @@ Reference Validator
 
  - pyyaml
  - six
+ - nyanbar (for Python 2.x)
 
 <h2> Introduction </h2>
 
@@ -22,6 +23,7 @@ This script goes through all HOT files associated with root template, taking map
 <li> `-e` is an absolute/relative path to environment file(s). </li>
 <li> `-p/--pretty-format` when selected, the output is colourful. </li>
 <li> `-u/--unused` causes printing additional info (unused instances without reference).</li>
+<li> `-n/--nyan` causes printing nyanbar.</li>
 </ul>
 
 <h2> Output </h2>
