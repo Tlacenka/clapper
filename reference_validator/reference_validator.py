@@ -18,16 +18,21 @@ if sys.version_info[0] == 2:
 
 
 class YAML_colours:
-        ''' Code for colouring output '''
-        BLUE      = '\033[94m'
-        GREEN     = '\033[92m'
-        YELLOW    = '\033[93m'
-        RED       = '\033[91m'
-        ORANGE    = '\033[33m'
-        BOLD      = '\033[1m'
-        UNDERLINE = '\033[4m'
-        DEFAULT   = '\033[0m'
+    ''' Code for colouring output '''
+    BLUE      = '\033[94m'
+    GREEN     = '\033[92m'
+    YELLOW    = '\033[93m'
+    RED       = '\033[91m'
+    ORANGE    = '\033[33m'
+    BOLD      = '\033[1m'
+    UNDERLINE = '\033[4m'
+    DEFAULT   = '\033[0m'
 
+class YAML_tree_info:
+    ''' Indicators about printed tree '''
+    OTHER = 0
+    LAST = 1
+    ONLY = 2
 
 class YAML_HotValidator:
     ''' Detects unused variables, invalid references.'''
@@ -54,6 +59,7 @@ class YAML_HotValidator:
         # Applied parameters
         self.print_unused = arguments['unused']
         self.pretty_format = arguments['pretty_format']
+        self.print_structure = arguments['print_tree']
         self.print_nyan = (sys.version_info[0] == 2) and arguments['nyan']
         self.printer = pprint.PrettyPrinter(indent=2)
 
@@ -587,7 +593,39 @@ class YAML_HotValidator:
                 resource.child.validate_file(self.curr_nodes)
                 self.validate_references(resource.child)
 
-        
+    def print_tree(self, root, indent, position):
+        ''' Prints tree structure of templates '''
+
+        if indent > 0:
+            if position == YAML_tree_info.ONLY:
+                print (' ── ' + root.path, end="")
+            elif position == YAML_tree_info.OTHER:
+                print ('\n' + (indent-1) * '   ' + '├─ ' + root.path, end="")
+            elif position == YAML_tree_info.LAST:
+                print ('\n' + (indent-1) * '   ' + '└─ ' + root.path, end="")
+        else:
+            print(root.path, end="")
+
+        indent = indent + 1
+
+        # Find out first and last child/sibling
+        lastchild = None
+        firstchild = None
+        for r in root.resources:
+            if r.child is not None:
+                lastchild = r.child
+                if firstchild is None:
+                    firstchild = r.child
+
+        position = (YAML_tree_info.ONLY if ((lastchild is not None) and (lastchild == firstchild)) else YAML_tree_info.OTHER)
+
+        for r in root.resources:
+            if r.child is not None:
+                if ((position != YAML_tree_info.ONLY) and (r.child == lastchild)):
+                    position = YAML_tree_info.LAST
+
+                self.print_tree(r.child, indent, position)
+
 
     def print_output(self):
         ''' Prints results of validation for all files + additional info. '''
@@ -816,7 +854,18 @@ class YAML_HotValidator:
                     else:
                         print('Status: FAILED')
 
-                print('\n\n')
+                print('\n')
+
+        if self.print_structure:
+            if self.pretty_format:
+                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE + 'Structure:' +
+                      YAML_colours.DEFAULT)
+            else:
+                print('Structure:')
+
+            self.print_tree(self.templates[-1], 0, YAML_tree_info.OTHER)
+            print('\n')
+
     def run(self):
         ''' Runs validator '''
 
@@ -894,6 +943,8 @@ def main():
                         help='When true, prints all unused resources/parameters.')
     parser.add_argument('-p', '--pretty-format', action='store_true',
                         help='When true, provides colourful output')
+    parser.add_argument('-t', '--print-tree', action='store_true',
+                        help='When true, output contains template structure')
     parser.add_argument('-e', '--environment', metavar='path/to/environment', nargs='+',
                         help='Environment files to be used.')
     parser.add_argument('-f', '--file', metavar='path/to/file',
