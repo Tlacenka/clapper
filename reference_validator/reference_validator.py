@@ -241,7 +241,7 @@ class YAML_HotValidator:
                             if par.used == False:
                                 par.used = True
 
-            elif section == YAML_HotValidator.YAML_Types.GET_ATTR: # TDO add check for hierarchy
+            elif section == YAML_HotValidator.YAML_Types.GET_ATTR: # TODO add check for hierarchy
                 if type(value) == list:
                     ret = self.check_attr_hierarchy(value, name)
                     if not ret[0]:
@@ -337,8 +337,6 @@ class YAML_HotValidator:
                     self.ok = False
 
             # Get all matches
-            # TODO: Would some kind of substraction of differences from appended lists be faster?
-            #       Or smth that gets pointers to objects, not just names
             matches = list(set([x.name for x in self.params]) & set([y.name for y in resource.properties]))
 
             # Share YAML_Prop_Par for each match
@@ -414,14 +412,16 @@ class YAML_HotValidator:
 
         def __init__(self, structure, isPar):
             self.name = structure[0]    # name of parameter/property
-            self.used = False                  # flag of usage (reference)
+            self.used = False           # flag of usage (reference)
             self.value = None if isPar else structure[1] # value (possibly structured)
             self.default = None
             if isPar and ('default' in structure[1]):
                 self.default = structure[1]['default']
 
         def merge(self, obj):
-            ''' Merges 2 objects, uses attributes of the second object if they are defined. '''
+            ''' Merges 2 objects, uses attributes of the second object if they are defined.
+                obj = parameter
+            '''
 
             # Objects must have the same name
             if self.name != obj.name:
@@ -817,6 +817,73 @@ class YAML_HotValidator:
                         print('Status: FAILED')
 
                 print('\n\n')
+    def run(self):
+        ''' Runs validator '''
+
+        # Initialize nyanbar
+        if self.print_nyan:
+            progress = nyanbar.NyanBar(tasks=6)
+
+        # Load environments to get mappings
+        self.load_environments()
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+
+        # Load HOTs in mappings
+        # All mappings are at the beginning, followed by children nodes
+        for hot in list(reversed(self.mappings)):
+            if hot.parent in self.environments:
+                hot.load_file(self.curr_nodes, self.mappings,
+                                  self.environments, os.path.join(self.init_dir,
+                                  os.path.dirname(hot.parent.path)))
+            else:
+                break
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+
+        # Load HOTs: change to its directory, validate -f
+        self.templates[0].load_file(self.curr_nodes, self.templates,
+                                             self.environments,
+                                             os.path.join(self.init_dir,
+                                             os.path.dirname(self.templates[0].path)))
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+
+        # Also add mapped files as children once there is a full structure of files
+        # (if done earlier, some mapped types used in mapped files could be skipped)
+        self.add_mappings()
+
+        # Check environment parameters against fully loaded HOT structure
+        self.validate_env_params()
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+
+        # Check properties x parameters
+        self.validate_properties(self.templates[-1])
+
+        for hot in list(reversed(self.mappings)):
+            if hot.parent in self.environments:
+                self.validate_properties(hot)
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+
+        # Validate references
+        self.validate_references(self.templates[-1])
+
+        if self.print_nyan:
+            progress.task_done()
+            time.sleep(1)
+            progress.finish()
 
 
 def main():
@@ -837,72 +904,8 @@ def main():
     # Initialize validator
     validator = YAML_HotValidator(vars(parser.parse_args()))
 
-    # Initialize nyanbar
-    if validator.print_nyan:
-        progress = nyanbar.NyanBar(tasks=6)
-
     # Run validator
-
-    # Load environments to get mappings
-    validator.load_environments()
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-
-    # Load HOTs in mappings
-    # All mappings are at the beginning, followed by children nodes
-    for hot in list(reversed(validator.mappings)):
-        if hot.parent in validator.environments:
-            hot.load_file(validator.curr_nodes, validator.mappings,
-                              validator.environments, os.path.join(validator.init_dir,
-                              os.path.dirname(hot.parent.path)))
-        else:
-            break
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-
-    # Load HOTs: change to its directory, validate -f
-    validator.templates[0].load_file(validator.curr_nodes, validator.templates,
-                                         validator.environments,
-                                         os.path.join(validator.init_dir,
-                                         os.path.dirname(validator.templates[0].path)))
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-
-    # Also add mapped files as children once there is a full structure of files
-    # (if done earlier, some mapped types used in mapped files could be skipped)
-    validator.add_mappings()
-
-    # Check environment parameters against fully loaded HOT structure
-    validator.validate_env_params()
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-
-    # Check properties x parameters
-    validator.validate_properties(validator.templates[-1])
-
-    for hot in list(reversed(validator.mappings)):
-        if hot.parent in validator.environments:
-            validator.validate_properties(hot)
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-
-    # Validate references
-    validator.validate_references(validator.templates[-1])
-
-    if validator.print_nyan:
-        progress.task_done()
-        time.sleep(1)
-        progress.finish()
+    validator.run()
 
     # Print results
     validator.print_output()
