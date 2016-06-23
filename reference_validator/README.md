@@ -24,6 +24,7 @@ This script goes through all HOT files associated with root template, taking map
 <li> `-p/--pretty-format` when selected, the output is colourful. </li>
 <li> `-u/--unused` causes printing additional info (unused instances without reference).</li>
 <li> `-n/--nyan` causes printing nyanbar.</li>
+<li> `-t/--print-tree` when selected, output also contains tree template structure.</li>
 </ul>
 
 <h2> Output </h2>
