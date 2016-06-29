@@ -102,7 +102,7 @@ class YAML_HotValidator:
             self.children = []          # Ordered children - by the moment of appearance in the code
 
             self.resources = []         # YAML_Resource list
-            self.params = []            # list of YAML_ParProp
+            self.params = []            # list of YAML_Prop_Par
                                         # TODO exception for root template when checking properties values
 
             self.outputs = {}           # {name : <value structure>}
@@ -126,6 +126,8 @@ class YAML_HotValidator:
             except IOError:
                 print('File ' + self.path + ' could not be opened.')
                 sys.exit(1)
+
+            #print (self.structure)
 
             # Save all parameters names, resources and properties
             if 'parameters' in self.structure:
@@ -180,12 +182,12 @@ class YAML_HotValidator:
             # Remove node from current nodes after validation
             curr_nodes.remove(self)
 
-
         def inspect_instances(self, properties, name):
             ''' Check if all references to variables are valid.
                 properties - structures containing instance properties and their values
                 name       - name of referring instance
             '''
+
             if isinstance(properties, list):
                 for element in properties:
                     if isinstance(element, dict) or isinstance(element, list):
@@ -217,11 +219,13 @@ class YAML_HotValidator:
                     self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
                                         YAML_HotValidator.YAML_Types.GET_RESOURCE, None))
                     self.ok = False
+                    #return None
                 else:
                     for resource in self.resources:
                         if value == resource.name:
                             resource.used = True
                             break
+                            #return resource
 
             # Parameter
             elif section == YAML_HotValidator.YAML_Types.GET_PARAM:
@@ -229,9 +233,12 @@ class YAML_HotValidator:
                     ret = self.check_param_hierarchy(value, name)
                     if not ret[0]:
                         # Add it to invalid references
-                            self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
-                                            YAML_HotValidator.YAML_Types.GET_PARAM, None))
-                            self.ok = False
+                        self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
+                                        YAML_HotValidator.YAML_Types.GET_PARAM, None))
+                        self.ok = False
+                        #return None
+                    #else:
+                    #    return ret[1]
                 else:
                     # Check if it is a pseudoparameter
                     if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
@@ -241,13 +248,18 @@ class YAML_HotValidator:
                             self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
                                                 YAML_HotValidator.YAML_Types.GET_PARAM, None))
                             self.ok = False
+                            #return None
 
                         else:
                             # Changes usage flag
                             par = [x for x in self.params if x.name == value][0]
                             if par.used == False:
                                 par.used = True
+                                #return par
+                    #else:
+                    #    return value
 
+            # Output value
             elif section == YAML_HotValidator.YAML_Types.GET_ATTR: # TODO add check for hierarchy
                 if type(value) == list:
                     ret = self.check_attr_hierarchy(value, name)
@@ -255,6 +267,10 @@ class YAML_HotValidator:
                         self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
                                     YAML_HotValidator.YAML_Types.GET_ATTR, None))
                         self.ok = False
+                        #return False
+                    #else:
+                    #    return ret[1]
+            #return None
 
 
         def check_attr_hierarchy(self, hierarchy, name):
@@ -265,24 +281,24 @@ class YAML_HotValidator:
                 return (False, hierarchy[0])
 
             # if it is in a children node, check its first level of hierarchy
-            elif [True for x in self.resources if (x.name == hierarchy[0])
-                                                  and x.type.endswith('.yaml')]:
+            elif [True for x in self.resources if ((x.name == hierarchy[0])
+                                                  and x.type.endswith('.yaml'))]:
+
                 flag = False
                 for r in self.resources:
                     if r.name == hierarchy[0]:
                         for f in self.children:
                             if r.type == f.path:
-
                                 # outputs_list used in case of autoscaling group TODO ASG x RG
                                 if ((len(hierarchy) >= 3) and r.isGroup and
                                     (hierarchy[1] == 'outputs_list') and
                                     (hierarchy[2] in f.outputs.keys())):
                                     flag = True
-
+            
                                 # mapped to outputs
                                 elif ((len(hierarchy) >= 2) and (hierarchy[1] in f.outputs.keys())):
                                     flag = True
-
+            
                                 #resource.<name> used
                                 elif ((len(hierarchy) >= 2) and hierarchy[1].startswith('resource.')):
                                     string = hierarchy[1].split('.')
@@ -296,23 +312,48 @@ class YAML_HotValidator:
             return (True, None)
 
 
-        def check_param_hierarchy(self, hierarchy, name): # TODO: improve output info
+        def check_param_hierarchy(self, hierarchy, name):
             ''' When access path to variable entered, check validity of hierarchy of input.
                 hierarchy - list of keys used for accessing value
+                name - referring instance
             '''
-            root = self.structure['parameters']
 
-            # Validate path to value
-            for ele in hierarchy:
+            # Get root - parameter and its structure
+            root = None
+            for p in self.params:
+                if p.name == hierarchy[0]:
+                    root = p
+            if root is None:
+                return (False, hierarchy[0])
+
+            # Try validating based on property
+            #value = None
+            #if p.value is not None:
+                #if type(p.value) == string:
+                    #value = p.value
+                #elif type(p.value) == dict:
+                    #ret = self.inspect_instances(p.value, name)
+                    #if ret is None:
+                        #return (False, hierarchy[1])
+                    #else:
+                        #value = ret
+            #else: # validate based on parameter only
+                #if p.default is not None:
+                    #value = p.default
+                #else:
+                    #return (False, hierarchy[1])
+            #print (value)
+            #sys.exit(0)
+
+            # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
+            if ((root.default is not None) and
+                (root.type == 'json')):
+                root = root.default
+
+            for ele in hierarchy[1:]:
                 if type(ele) == str:
                     if ele.isdigit(): # TODO points to smth in a group, check if it is a group
                         pass
-                    elif ele in (root.keys() if type(root) == dict else root): # ERROR due to embedded get_param
-                        root = root[ele]
-                    # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
-                    elif (('default' in root) and
-                        (self.structure['parameters'][hierarchy[0]]['type'] == 'json')):
-                        root = root['default']
                     else:
                         return (False, ele)
                 elif type(ele) == int: # in case of a list, which position
@@ -422,6 +463,11 @@ class YAML_HotValidator:
             self.used = False           # flag of usage (reference)
             self.value = None if isPar else structure[1] # value (possibly structured)
             self.default = None
+            self.type = None
+
+            if isPar and ('type' in structure[1]):
+                self.type = structure[1]['type']
+
             if isPar and ('default' in structure[1]):
                 self.default = structure[1]['default']
 
@@ -441,7 +487,9 @@ class YAML_HotValidator:
 
             if obj.default is not None:
                 self.default = obj.default
-            
+
+            if obj.type is not None:
+                self.type = obj.type
 
     class YAML_Reference:
         ''' Saves all invalid references for output. In YAML_Hotfile. '''
@@ -629,7 +677,6 @@ class YAML_HotValidator:
                 lastindex = root.resources.index(r)
                 if firstindex is None:
                     firstindex = root.resources.index(r)
-        #print('\n' + (firstchild.path if (firstchild is not None) else 'None') + ' ' + (lastchild.path if (lastchild is not None) else 'None'))
 
         child_position = (YAML_tree_info.ONLY if ((lastindex is not None) and (lastindex == firstindex)) else YAML_tree_info.OTHER)
         branch_list = branch_list + ([indent-1] if root_position != YAML_tree_info.ONLY else [])
