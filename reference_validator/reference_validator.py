@@ -195,175 +195,162 @@ class YAML_HotValidator:
             elif isinstance(properties, dict):
                 # Check references, mark used variables
                 for key, value in six.iteritems(properties):
-                    if key == 'get_param':
-                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_PARAM)
-                    elif key == 'get_resource':
-                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_RESOURCE)
-                    elif key == 'get_attr':
-                        self.check_instance_validity(value, name, YAML_HotValidator.YAML_Types.GET_ATTR)
-                    else:
+                    if not self.classify_items(key, value, name):
                         self.inspect_instances(value, name)
 
+        def classify_items(self, key, value, name):
+           ''' If item contains reference, it is processed. '''
 
-        def check_instance_validity(self, value, name, section):
-            ''' Check if all declared variables have been used.
-                value   - referred variable
-                name    - name of referring instance
-                section - kind of referenced variable
+           if key == 'get_param':
+               #print (value)
+               self.check_get_parameter(value, name)
+           elif key == 'get_resource':
+               self.check_get_resource(value, name)
+           elif key == 'get_attr':
+               self.check_get_attribute(value, name)
+           else:
+               return False
+
+           return True
+
+        def check_get_parameter(self, value, name):
+            ''' Validates get_param
+                value - referemce
+                name - instance name
             '''
-
-            # Resource
-            if section == YAML_HotValidator.YAML_Types.GET_RESOURCE:
-                if value not in [x.name for x in self.resources]:
-                    # Add it to invalid references
-                    self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
-                                        YAML_HotValidator.YAML_Types.GET_RESOURCE, None))
-                    self.ok = False
-                    #return None
-                else:
-                    for resource in self.resources:
-                        if value == resource.name:
-                            resource.used = True
-                            break
-                            #return resource
-
-            # Parameter
-            elif section == YAML_HotValidator.YAML_Types.GET_PARAM:
-                if type(value) == list:
-                    ret = self.check_param_hierarchy(value, name)
-                    if not ret[0]:
-                        # Add it to invalid references
-                        self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
-                                        YAML_HotValidator.YAML_Types.GET_PARAM, None))
-                        self.ok = False
-                        #return None
+            if type(value) == list:
+                error = None
+                # Get root - parameter and its structure
+                root = None
+                for p in self.params:
+                    if p.name == value[0]:
+                        root = p
+                if root is None:
+                    error = value[0]
+   
+                # Try validating based on property
+                #value = None
+                #if p.value is not None:
+                    #if type(p.value) == string:
+                        #value = p.value
+                    #elif type(p.value) == dict:
+                        #kv = p.value.items()[0]
+                        #if not self.classify_items(kv[0], kv[1], name):
+                            #return (False, hierarchy[1])
+                        #else:
+                            #get value
+                #else: # validate based on parameter only
+                    #if p.default is not None:
+                        #value = p.default
                     #else:
-                    #    return ret[1]
-                else:
-                    # Check if it is a pseudoparameter
-                    if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
-                        if value not in [x.name for x in self.params]:
-
-                            # Add it to invalid references
-                            self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
-                                                YAML_HotValidator.YAML_Types.GET_PARAM, None))
-                            self.ok = False
-                            #return None
-
-                        else:
-                            # Changes usage flag
-                            par = [x for x in self.params if x.name == value][0]
-                            if par.used == False:
-                                par.used = True
-                                #return par
-                    #else:
-                    #    return value
-
-            # Output value
-            elif section == YAML_HotValidator.YAML_Types.GET_ATTR: # TODO add check for hierarchy
-                if type(value) == list:
-                    ret = self.check_attr_hierarchy(value, name)
-                    if not ret[0]:
-                        self.invalid.append(YAML_HotValidator.YAML_Reference(ret[1], name,
-                                    YAML_HotValidator.YAML_Types.GET_ATTR, None))
-                        self.ok = False
-                        #return False
-                    #else:
-                    #    return ret[1]
-            #return None
-
-
-        def check_attr_hierarchy(self, hierarchy, name):
-            ''' When access path to variable entered, check validity of hierarchy of output.
-                hierarchy - list of keys used for accessing value
-            '''
-            if hierarchy[0] not in [x.name for x in self.resources]:
-                return (False, hierarchy[0])
-
-            # if it is in a children node, check its first level of hierarchy
-            elif [True for x in self.resources if ((x.name == hierarchy[0])
-                                                  and x.type.endswith('.yaml'))]:
-
-                flag = False
-                for r in self.resources:
-                    if r.name == hierarchy[0]:
-                        for f in self.children:
-                            if r.type == f.path:
-                                # outputs_list used in case of autoscaling group TODO ASG x RG
-                                if ((len(hierarchy) >= 3) and r.isGroup and
-                                    (hierarchy[1] == 'outputs_list') and
-                                    (hierarchy[2] in f.outputs.keys())):
-                                    flag = True
-            
-                                # mapped to outputs
-                                elif ((len(hierarchy) >= 2) and (hierarchy[1] in f.outputs.keys())):
-                                    flag = True
-            
-                                #resource.<name> used
-                                elif ((len(hierarchy) >= 2) and hierarchy[1].startswith('resource.')):
-                                    string = hierarchy[1].split('.')
-                                    if string[1] in [x.name for x in f.resources]:
-                                        flag = True
-                                break
-                        break
-                if not flag:
-                    return (False, hierarchy[0])
-
-            return (True, None)
-
-
-        def check_param_hierarchy(self, hierarchy, name):
-            ''' When access path to variable entered, check validity of hierarchy of input.
-                hierarchy - list of keys used for accessing value
-                name - referring instance
-            '''
-
-            # Get root - parameter and its structure
-            root = None
-            for p in self.params:
-                if p.name == hierarchy[0]:
-                    root = p
-            if root is None:
-                return (False, hierarchy[0])
-
-            # Try validating based on property
-            #value = None
-            #if p.value is not None:
-                #if type(p.value) == string:
-                    #value = p.value
-                #elif type(p.value) == dict:
-                    #ret = self.inspect_instances(p.value, name)
-                    #if ret is None:
                         #return (False, hierarchy[1])
-                    #else:
-                        #value = ret
-            #else: # validate based on parameter only
-                #if p.default is not None:
-                    #value = p.default
-                #else:
-                    #return (False, hierarchy[1])
-            #print (value)
-            #sys.exit(0)
-
-            # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
-            if ((root.default is not None) and
-                (root.type == 'json')):
-                root = root.default
-
-            for ele in hierarchy[1:]:
-                if type(ele) == str:
-                    if ele.isdigit(): # TODO points to smth in a group, check if it is a group
+                #print (value)
+   
+                # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
+                if ((root.default is not None) and
+                    (root.type == 'json')):
+                    root = root.default
+   
+                for ele in value[1:]:
+                    if type(ele) == str:
+                        if ele.isdigit(): # TODO points to smth in a group, check if it is a group
+                            pass
+                        else:
+                            # Magic
+                            error = ele
+                    elif type(ele) == int: # in case of a list, which position
                         pass
+                    elif type(ele) == dict: # nested get_
+                        kv = ele.items()[0]
+                        if not self.classify_items(kv[0]. kv[1], name):
+                            error = ele
                     else:
-                        return (False, ele)
-                elif type(ele) == int: # in case of a list, which position
-                    pass
-                else:
-                    # TODO somehow get the result of get_X, path in structure or smth
-                    self.inspect_instances(ele, name)
-                    print (ele)
-            return (True, None)
+                        error = ele
 
+                if error is not None:
+                    # Add it to invalid references
+                    self.invalid.append(YAML_HotValidator.YAML_Reference(value[1], name,
+                                    YAML_HotValidator.YAML_Types.GET_PARAM, None))
+                    self.ok = False
+   
+            else:
+                # Check if it is a pseudoparameter
+                if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
+                    if value not in [x.name for x in self.params]:
+   
+                        # Add it to invalid references
+                        self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
+                                             YAML_HotValidator.YAML_Types.GET_PARAM, None))
+                        self.ok = False
+   
+                    else:
+                        # Changes usage flag
+                        par = [x for x in self.params if x.name == value][0]
+                        if par.used == False:
+                            par.used = True
+            
+        def check_get_resource(self, value, name):
+            ''' Validates get_resource
+                value - reference
+                name - instance name
+            '''
+            if value not in [x.name for x in self.resources]:
+                 # Add it to invalid references
+                 self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
+                                     YAML_HotValidator.YAML_Types.GET_RESOURCE, None))
+                 self.ok = False
+            else:
+                for resource in self.resources:
+                    if value == resource.name:
+                        resource.used = True
+                        break
+
+        def check_get_attribute(self, value, name):
+            ''' Validates get_attr
+                value - reference
+                name - instance name
+            '''
+
+            if type(value) == list:
+                #ret = self.check_attr_hierarchy(value, name)
+                error = None
+
+                if value[0] not in [x.name for x in self.resources]:
+                   error = value[0]
+   
+                # if it is in a children node, check its first level of hierarchy
+                elif [True for x in self.resources if ((x.name == value[0])
+                                                     and x.type.endswith('.yaml'))]:
+   
+                    flag = False
+                    for r in self.resources:
+                        if r.name == value[0]:
+                            for f in self.children:
+                                if r.type == f.path:
+                                    # outputs_list used in case of autoscaling group TODO ASG x RG
+                                    if ((len(value) >= 3) and r.isGroup and
+                                        (value[1] == 'outputs_list') and
+                                        (value[2] in f.outputs.keys())):
+                                        flag = True
+               
+                                    # mapped to outputs
+                                    elif ((len(value) >= 2) and (value[1] in f.outputs.keys())):
+                                        flag = True
+               
+                                    #resource.<name> used
+                                    elif ((len(value) >= 2) and value[1].startswith('resource.')):
+                                        string = value[1].split('.')
+                                        if string[1] in [x.name for x in f.resources]:
+                                            flag = True
+                                    break
+                            break
+                    if not flag:
+                        error = value[0]
+                
+                if error is not None:
+                    self.invalid.append(YAML_HotValidator.YAML_Reference(error, name,
+                                        YAML_HotValidator.YAML_Types.GET_ATTR, None))
+                    self.ok = False
 
         def check_prop_par(self, parent, resource, environments):
             ''' Check properties against parameters and vice versa, tag used. '''
@@ -634,6 +621,7 @@ class YAML_HotValidator:
 
         # Validate parent
         root.validate_file(self.curr_nodes)
+        #print(root.path)
 
         # Go through all resources in current template
         for resource in root.resources:
