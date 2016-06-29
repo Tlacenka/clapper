@@ -29,10 +29,10 @@ class YAML_colours:
     DEFAULT   = '\033[0m'
 
 class YAML_tree_info:
-    ''' Indicators about printed tree '''
+    ''' Indicators of printed tree nodes '''
     OTHER = 0
-    LAST = 1
-    ONLY = 2
+    LAST = 1 # Last sibling
+    ONLY = 2 # Only one child
 
 class YAML_HotValidator:
     ''' Detects unused variables, invalid references.'''
@@ -61,6 +61,7 @@ class YAML_HotValidator:
         self.pretty_format = arguments['pretty_format']
         self.print_structure = arguments['print_tree']
         self.print_nyan = (sys.version_info[0] == 2) and arguments['nyan']
+        self.sleep_time = 0.3
         self.printer = pprint.PrettyPrinter(indent=2)
 
         # Check HOT file (-f)
@@ -593,38 +594,53 @@ class YAML_HotValidator:
                 resource.child.validate_file(self.curr_nodes)
                 self.validate_references(resource.child)
 
-    def print_tree(self, root, indent, position):
+    def print_tree(self, root, root_position, indent, branch_list):
         ''' Prints tree structure of templates '''
 
+        # Print higher branches
+        if (len(branch_list) and (root_position != YAML_tree_info.ONLY)):
+            cur_indent = 0
+            print('')
+            for i in branch_list:
+                print ((i-cur_indent-1) * '   ' + '│   ', end="")
+                cur_indent = i
+            print ((indent-cur_indent-1) * '   ', end="")
+        elif root_position != YAML_tree_info.ONLY:
+            print ('\n' + (indent-1) * '   ', end="")
+                
+        # Print child node
         if indent > 0:
-            if position == YAML_tree_info.ONLY:
+            if root_position == YAML_tree_info.ONLY:
                 print (' ── ' + root.path, end="")
-            elif position == YAML_tree_info.OTHER:
-                print ('\n' + (indent-1) * '   ' + '├─ ' + root.path, end="")
-            elif position == YAML_tree_info.LAST:
-                print ('\n' + (indent-1) * '   ' + '└─ ' + root.path, end="")
+            elif root_position == YAML_tree_info.OTHER:
+                print ('├─ ' + root.path, end="")
+            elif root_position == YAML_tree_info.LAST:
+                print ('└─ ' + root.path, end="")
         else:
             print(root.path, end="")
 
         indent = indent + 1
 
         # Find out first and last child/sibling
-        lastchild = None
-        firstchild = None
+        lastindex = None
+        firstindex = None
         for r in root.resources:
             if r.child is not None:
-                lastchild = r.child
-                if firstchild is None:
-                    firstchild = r.child
+                lastindex = root.resources.index(r)
+                if firstindex is None:
+                    firstindex = root.resources.index(r)
+        #print('\n' + (firstchild.path if (firstchild is not None) else 'None') + ' ' + (lastchild.path if (lastchild is not None) else 'None'))
 
-        position = (YAML_tree_info.ONLY if ((lastchild is not None) and (lastchild == firstchild)) else YAML_tree_info.OTHER)
+        child_position = (YAML_tree_info.ONLY if ((lastindex is not None) and (lastindex == firstindex)) else YAML_tree_info.OTHER)
+        branch_list = branch_list + ([indent-1] if root_position != YAML_tree_info.ONLY else [])
 
+        # Print subtrees of children
         for r in root.resources:
             if r.child is not None:
-                if ((position != YAML_tree_info.ONLY) and (r.child == lastchild)):
-                    position = YAML_tree_info.LAST
+                if ((child_position != YAML_tree_info.ONLY) and (root.resources.index(r) == lastindex)):
+                    child_position = YAML_tree_info.LAST
 
-                self.print_tree(r.child, indent, position)
+                self.print_tree(r.child, child_position, indent, branch_list)
 
 
     def print_output(self):
@@ -863,7 +879,7 @@ class YAML_HotValidator:
             else:
                 print('Structure:')
 
-            self.print_tree(self.templates[-1], 0, YAML_tree_info.OTHER)
+            self.print_tree(self.templates[-1], YAML_tree_info.ONLY, 0, [])
             print('\n')
 
     def run(self):
@@ -878,7 +894,7 @@ class YAML_HotValidator:
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
 
         # Load HOTs in mappings
         # All mappings are at the beginning, followed by children nodes
@@ -892,7 +908,7 @@ class YAML_HotValidator:
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
 
         # Load HOTs: change to its directory, validate -f
         self.templates[0].load_file(self.curr_nodes, self.templates,
@@ -902,7 +918,7 @@ class YAML_HotValidator:
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
 
         # Also add mapped files as children once there is a full structure of files
         # (if done earlier, some mapped types used in mapped files could be skipped)
@@ -913,7 +929,7 @@ class YAML_HotValidator:
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
 
         # Check properties x parameters
         self.validate_properties(self.templates[-1])
@@ -924,14 +940,14 @@ class YAML_HotValidator:
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
 
         # Validate references
         self.validate_references(self.templates[-1])
 
         if self.print_nyan:
             progress.task_done()
-            time.sleep(1)
+            time.sleep(self.sleep_time)
             progress.finish()
 
 
