@@ -240,18 +240,17 @@ class YAML_HotValidator:
                 get_value = None
                 #print (root.value)
                 if root.value is not None:
-                    print ('hello')
-                    if type(root.value) == string:
+                    if type(root.value) == str:
                         get_value = root.value
                     elif type(root.value) == dict:
-                        kv = root.get_value.items()[0]
+                        kv = root.value.items()[0]
                         if self.classify_items(kv[0], kv[1], name) is None:
                             error = value[1]
                         elif ((kv[0] == 'str_replace') and
                               (self.str_replace(kv) is None)):
                             error = value[1]
                         else:
-                           #get value
+                           #get_value
                             pass
                 else: # validate based on parameter only
                     if root.default is not None:
@@ -386,20 +385,12 @@ class YAML_HotValidator:
             for m in matches:
                 # Finds parameter and property
                 prop = [x for x in resource.properties if x.name == m][0]
-                for p in self.params:
-                    if p.name == m:
+                for p in range(len(self.params)):
+                    if self.params[p].name == m:
                         # Merges their attributes, prop and param share one object from now on
-                        prop.merge(p)
-                        p = prop
-                        #print (prop.value, p.value)
-
-                
-                #for p in self.params:
-                #    if p.name == m:
-                #        pass
-                        #print (prop.value, p.value)
-                # Check variable life cycle, copy
-
+                        prop.merge(self.params[p])
+                        self.params[p] = prop
+                        break
 
     class YAML_Env:
         ''' Class with attributes needed for work with environment files. '''
