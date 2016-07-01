@@ -156,7 +156,7 @@ class YAML_HotValidator:
 
                     # Start validating child
                     templates[0].load_file(curr_nodes, templates, environments,
-                                               os.path.join(curr_path, os.path.dirname(self.path)))
+                                           os.path.join(curr_path, os.path.dirname(self.path)))
 
                     # The whole subtree with root = current node is loaded
 
@@ -195,7 +195,7 @@ class YAML_HotValidator:
             elif isinstance(properties, dict):
                 # Check references, mark used variables
                 for key, value in six.iteritems(properties):
-                    if not self.classify_items(key, value, name):
+                    if self.classify_items(key, value, name) is None:
                         self.inspect_instances(value, name)
 
         def classify_items(self, key, value, name):
@@ -203,15 +203,19 @@ class YAML_HotValidator:
 
            if key == 'get_param':
                #print (value)
-               self.check_get_parameter(value, name)
+               return self.check_get_parameter(value, name)
            elif key == 'get_resource':
-               self.check_get_resource(value, name)
+               return self.check_get_resource(value, name)
            elif key == 'get_attr':
-               self.check_get_attribute(value, name)
-           else:
-               return False
+               return self.check_get_attribute(value, name)
+               return None
 
-           return True
+        def str_replace(self, kv):
+            ''' Validates str_replace '''
+            if ((kv is None) or (kv[0] != 'str_replace')):
+               return None
+
+            print (kv)
 
         def check_get_parameter(self, value, name):
             ''' Validates get_param
@@ -219,7 +223,9 @@ class YAML_HotValidator:
                 name - instance name
             '''
             if type(value) == list:
+                
                 error = None
+
                 # Get root - parameter and its structure
                 root = None
                 for p in self.params:
@@ -227,29 +233,32 @@ class YAML_HotValidator:
                         root = p
                 if root is None:
                     error = value[0]
-   
+
+                # Get its value
+
                 # Try validating based on property
-                #value = None
-                #if p.value is not None:
-                    #if type(p.value) == string:
-                        #value = p.value
-                    #elif type(p.value) == dict:
-                        #kv = p.value.items()[0]
-                        #if not self.classify_items(kv[0], kv[1], name):
-                            #return (False, hierarchy[1])
-                        #else:
-                            #get value
-                #else: # validate based on parameter only
-                    #if p.default is not None:
-                        #value = p.default
-                    #else:
-                        #return (False, hierarchy[1])
+                get_value = None
+                #print (root.value)
+                if root.value is not None:
+                    print ('hello')
+                    if type(root.value) == string:
+                        get_value = root.value
+                    elif type(root.value) == dict:
+                        kv = root.get_value.items()[0]
+                        if self.classify_items(kv[0], kv[1], name) is None:
+                            error = value[1]
+                        elif ((kv[0] == 'str_replace') and
+                              (self.str_replace(kv) is None)):
+                            error = value[1]
+                        else:
+                           #get value
+                            pass
+                else: # validate based on parameter only
+                    if root.default is not None:
+                        get_value = root.default
+                    else:
+                        error = value[1]
                 #print (value)
-   
-                # For params with json type, allow for "default KV section" - prolly to be removed when better way is implemented
-                if ((root.default is not None) and
-                    (root.type == 'json')):
-                    root = root.default
    
                 for ele in value[1:]:
                     if type(ele) == str:
@@ -270,7 +279,7 @@ class YAML_HotValidator:
                 if error is not None:
                     # Add it to invalid references
                     self.invalid.append(YAML_HotValidator.YAML_Reference(value[1], name,
-                                    YAML_HotValidator.YAML_Types.GET_PARAM, None))
+                                        YAML_HotValidator.YAML_Types.GET_PARAM, None))
                     self.ok = False
    
             else:
@@ -312,7 +321,6 @@ class YAML_HotValidator:
             '''
 
             if type(value) == list:
-                #ret = self.check_attr_hierarchy(value, name)
                 error = None
 
                 if value[0] not in [x.name for x in self.resources]:
@@ -320,7 +328,7 @@ class YAML_HotValidator:
    
                 # if it is in a children node, check its first level of hierarchy
                 elif [True for x in self.resources if ((x.name == value[0])
-                                                     and x.type.endswith('.yaml'))]:
+                                                       and x.type.endswith('.yaml'))]:
    
                     flag = False
                     for r in self.resources:
@@ -378,12 +386,19 @@ class YAML_HotValidator:
             for m in matches:
                 # Finds parameter and property
                 prop = [x for x in resource.properties if x.name == m][0]
-                par = [y for y in self.params if y.name == m][0]
+                for p in self.params:
+                    if p.name == m:
+                        # Merges their attributes, prop and param share one object from now on
+                        prop.merge(p)
+                        p = prop
+                        #print (prop.value, p.value)
 
-                # Merges their attributes, prop and param share one object from now on
-                merged = prop.merge(par)
-                prop = merged
-                par = merged
+                
+                #for p in self.params:
+                #    if p.name == m:
+                #        pass
+                        #print (prop.value, p.value)
+                # Check variable life cycle, copy
 
 
     class YAML_Env:
@@ -437,6 +452,7 @@ class YAML_HotValidator:
                 else:
                     for prop in resource_struct['properties'].items():
                         self.properties.append(YAML_HotValidator.YAML_Prop_Par(prop, False))
+                        #print (prop)
 
             self.used = False
 
@@ -448,7 +464,7 @@ class YAML_HotValidator:
         def __init__(self, structure, isPar):
             self.name = structure[0]    # name of parameter/property
             self.used = False           # flag of usage (reference)
-            self.value = None if isPar else structure[1] # value (possibly structured)
+            self.value = (None if isPar else structure[1]) # value (possibly structured)
             self.default = None
             self.type = None
 
@@ -462,7 +478,6 @@ class YAML_HotValidator:
             ''' Merges 2 objects, uses attributes of the second object if they are defined.
                 obj = parameter
             '''
-
             # Objects must have the same name
             if self.name != obj.name:
                 return
@@ -561,7 +576,8 @@ class YAML_HotValidator:
                     for origin, mapped in six.iteritems(env.resource_registry):
 
                         # Finds mapped file if the mapping is designated for the resource
-                        if (res.type == origin) and ((type(mapped) == str) or (mapped[1] == res.name)):
+                        if ((res.type == origin) and
+                            ((type(mapped) == str) or (mapped[1] == res.name))):
 
                             # Assign it to resource
                             for m in self.mappings:
@@ -609,11 +625,14 @@ class YAML_HotValidator:
         for resource in template.resources:
             # Continue with child nodes
             if resource.child is not None:
-                resource.child.check_prop_par(template, resource, self.environments)
+                resource.child.check_prop_par(template, resource,
+                                              self.environments)
                 self.validate_properties(resource.child)
 
         # Remove node from current nodes after validation
         self.curr_nodes.remove(self)
+
+        # TODO get value of properties for future use
 
 
     def validate_references(self, root):
@@ -684,8 +703,8 @@ class YAML_HotValidator:
         # Environments
         if self.environments:
             if self.pretty_format:
-                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE + 'Environments:' +
-                      YAML_colours.DEFAULT)
+                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE +
+                      'Environments:' + YAML_colours.DEFAULT)
             else:
                 print('Environments:')
 
@@ -701,8 +720,10 @@ class YAML_HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(YAML_colours.BOLD + YAML_colours.UNDERLINE + 'File ' + YAML_colours.BLUE +
-                          os.path.relpath(env.path, self.init_dir) + YAML_colours.DEFAULT)
+                    print(YAML_colours.BOLD + YAML_colours.UNDERLINE +
+                          'File ' + YAML_colours.BLUE +
+                          os.path.relpath(env.path, self.init_dir) +
+                          YAML_colours.DEFAULT)
                 else:
                     print('File ' + os.path.relpath(env.path, self.init_dir))
                 print('')
@@ -743,14 +764,14 @@ class YAML_HotValidator:
                 # Print file status as OK if there were no problems
                 if env.ok:
                     if self.pretty_format:
-                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.GREEN + 'OK' +
-                              YAML_colours.DEFAULT)
+                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.GREEN +
+                              'OK' + YAML_colours.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.RED + 'FAILED' +
-                              YAML_colours.DEFAULT)
+                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.RED +
+                              'FAILED' + YAML_colours.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -761,7 +782,8 @@ class YAML_HotValidator:
         rev_templates = list(reversed(self.templates))
         for hot in [x for x in [rev_templates, list(reversed(self.mappings))] if len(x)]:
             if self.pretty_format:
-                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE + ('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:') +
+                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE +
+                      ('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:') +
                       YAML_colours.DEFAULT)
             else:
                 print(('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:'))
@@ -778,8 +800,8 @@ class YAML_HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(YAML_colours.BOLD + YAML_colours.UNDERLINE + 'File ' + YAML_colours.BLUE +
-                          node.path + YAML_colours.DEFAULT)
+                    print(YAML_colours.BOLD + YAML_colours.UNDERLINE + 'File ' +
+                          YAML_colours.BLUE + node.path + YAML_colours.DEFAULT)
                 else:
                     print('File ' + node.path)
 
@@ -894,14 +916,14 @@ class YAML_HotValidator:
                 # Print file status as OK if there were no problems
                 if node.ok:
                     if self.pretty_format:
-                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.GREEN + 'OK' +
-                              YAML_colours.DEFAULT)
+                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.GREEN +
+                              'OK' + YAML_colours.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.RED + 'FAILED' +
-                              YAML_colours.DEFAULT)
+                        print(YAML_colours.BOLD + 'Status: ' + YAML_colours.RED +
+                              'FAILED' + YAML_colours.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -909,8 +931,8 @@ class YAML_HotValidator:
 
         if self.print_structure:
             if self.pretty_format:
-                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE + 'Structure:' +
-                      YAML_colours.DEFAULT)
+                print(YAML_colours.ORANGE + YAML_colours.BOLD + YAML_colours.UNDERLINE +
+                      'Structure:' + YAML_colours.DEFAULT)
             else:
                 print('Structure:')
 
