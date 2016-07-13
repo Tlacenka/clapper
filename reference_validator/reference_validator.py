@@ -211,13 +211,6 @@ class YAML_HotValidator:
            else:
                return None
 
-        def str_replace(self, kv):
-            ''' Validates str_replace '''
-            if ((kv is None) or (kv[0] != 'str_replace')):
-               return None
-
-            print ('hello', kv)
-            return True
 
         def check_get_parameter(self, value, name):
             ''' Validates get_param
@@ -328,18 +321,16 @@ class YAML_HotValidator:
                 name - instance name
             '''
 
-            flag = False
             for r in self.resources:
                 if value == r.name:
                     r.used = True
-                    flag = True
-                    break
+                    return r
 
-            if not flag:
-                # Add it to invalid references
-                self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
-                                    YAML_HotValidator.YAML_Types.GET_RESOURCE, None))
-                self.ok = False
+            # If not found, add it to invalid references
+            self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
+                                YAML_HotValidator.YAML_Types.GET_RESOURCE, None))
+            self.ok = False
+            return None
 
 
         def check_get_attribute(self, value, name):
@@ -352,15 +343,19 @@ class YAML_HotValidator:
 
             if type(value) == list:
 
-                # Root is a resource - find root
-                get_value = None
-                for r in self.resources:
-                    if r.name == value[0]:
-                        get_value = r
-                        break
+                if len(value) < 2:
+                    error = value
 
-                if get_value is None:
-                    error = value[0]
+                # Root is a resource - find root
+                if error is None:
+                    get_value = None
+                    for r in self.resources:
+                        if r.name == value[0]:
+                            get_value = r
+                            break
+
+                    if get_value is None:
+                        error = value[0]
 
                 if error is None:
                     # Find output and its value
@@ -369,35 +364,128 @@ class YAML_HotValidator:
                     if not get_value.type.endswith('.yaml'):
                         return get_value
 
-                    # outputs_list used in case of autoscaling group TODO ASG x RG
-                    if ((len(value) >= 3) and get_value.isGroup and
-                        (value[1] == 'outputs_list')):
-                        for o in get_value.child.outputs.keys():
-                            if o == value[2]:
-                                get_value = o
-                                # TODO get value
-
-                    # mapped to outputs
-                    elif ((len(value) >= 2) and (value[1] in get_value.child.outputs.keys())):
-                        flag = True
-
-                    #resource.<name> used
-                    elif ((len(value) >= 2) and value[1].startswith('resource.')):
+                    # resource.<name> used
+                    if value[1].startswith('resource.'):
                         string = value[1].split('.')
-                        if string[1] in [x.name for x in get_value.child.resources]:
-                            flag = True
+                        flag = False
+                        for r in get_value.child.resources:
+                            if string[1] == r.name:
+                                get_value = r
+                                flag = True
+                                break
+                        if not flag:
+                            error = value[1]
+                        else:
+                            #print (get_value)
+                            return get_value
+                                
+                    # outputs_list used in case of autoscaling group TODO ASG x RG
+                    elif (get_value.isGroup and (len(value) >= 3) and
+                          (value[1] == 'outputs_list')):
+                        flag = False
+                        for k, v in six.iteritems(get_value.child.outputs):
+                            if ((k == value[2]) and (type(v) is dict) and
+                                ('value' in v.keys())):
+                                cur_file = get_value.child
+                                get_value = v['value']
+                                flag = True
+                                break
+
+                        if not flag:
+                            error = value[1]
+                        else:
+                            # If the value is in get_, validate nested get_
+                            if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
+                                ('get_' in get_value.keys()[0])):
+                                get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                                if get_value is None:
+                                    error = value[1] # TODO tag nested
+
+                            # Validate rest of the hierarchy
+                            if error is None:
+                                for i in range(3, len(value)):
+                                    if type(get_value) != dict:
+                                        error = value[i]
+                                        break
+
+                                    if value[i] in get_value:
+                                        get_value = get_value[value[i]]
+                                    else:
+                                       error = value[i]
+                                       break
+
+                            if error is None:
+                                return get_value
+
+                    # normally mapped to outputs section
+                    # TODO remove duplicate sections from outputs_list and outputs
                     else:
-                        error = value[1]
+                        # Find output
+                        flag = False
+                        for k, v in six.iteritems(get_value.child.outputs):
+                            if value[1] == k:
+                                cur_file = get_value.child
+                                get_value = v
+                                flag = True
+                                break
+                        if not flag:
+                            error = value[1]
+
+                        if error is None:
+                            # Go to value section of the output
+                            if ((type(get_value) == dict) and
+                                ('value' in get_value.keys())):
+                                get_value = get_value['value']
+                            else:
+                                error = value[1]
+
+                        if error is None:
+                            if type(get_value) == dict:
+                                # str_replace or list_join
+                                if (('str_replace' in get_value.keys()) or
+                                    (('list_join') in get_value.keys())):
+                                    pass
+
+                                # get_
+                                elif ((len(get_value.keys()) == 1) and
+                                      ('get_' in get_value.keys()[0])):
+                                      get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                                      if get_value is None:
+                                          error = value[1]
+
+                                # else - structured value
+                            else:
+                                # can it be something different than a dict?
+                                error = value[1]
+
+                        if error is None:
+                            # Get subvalues of value from other elements of the get_attr list
+                            for i in range(2, len(value)):
+                                if type(get_value) != dict:
+                                    error = value[i]
+                                    break
+   
+                                if value[i] in get_value:
+                                    get_value = get_value[value[i]]
+                                else:
+                                    error = value[i]
+                                    break
+
 
             # Is there any other format of get_attr than a list?
             else:
                 error = value
 
-            if error is not None:
-                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name,
+            # Return value or None
+            if error is None:
+                #print (get_value)
+                return get_value
+            else:
+                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name + ' ' + value[0],
                                     YAML_HotValidator.YAML_Types.GET_ATTR, None))
                 self.ok = False
                 return None
+
 
         def check_prop_par(self, parent, resource, environments):
             ''' Check properties against parameters and vice versa, tag used. '''
