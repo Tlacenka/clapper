@@ -214,7 +214,7 @@ class YAML_HotValidator:
 
         def check_get_parameter(self, value, name):
             ''' Validates get_param
-                value - referemce
+                value - reference
                 name - instance name
             '''
             if type(value) == list:
@@ -243,49 +243,60 @@ class YAML_HotValidator:
                            if (kv[0] == 'str_replace'):
                                get_value = self.str_replace(kv)
                                if get_value is None:
-                                 error = value[1]
+                                 error = value[0]
                            else:
-                              get_value = self.classify_items(kv[0], kv[1], name)
+                              if type(self.parent) == YAML_HotValidator.YAML_Hotfile:
+                                 get_value = self.parent.classify_items(kv[0], kv[1], name)
+                                 if get_value is None:
+                                     error = value[0]
+
                               if get_value is None:
-                                 error = value[1]
+                                 error = value[0]
                                  
 
                    else: # validate based on parameter only
                        if root.default is not None:
                            get_value = root.default
                        else:
-                           error = value[1]
+                           error = value[0]
                 #print ('value', get_value)
 
                 # Get value of the rest of the hierarchy
                 if error is None:
-                   for ele in value[1:]:
-                       if type(ele) == str:
-                           if ele.isdigit(): # TODO points to smth in a group, check if it is a group
+                   for i in range(1, len(value)):
+                       if type(value[i]) == str:
+                           if value[i].isdigit(): # TODO points to smth in a group, check if it is a group
                                pass
                            else:
                                # Try finding value of key in current structure
                                if type(get_value) is not dict:
-                                  error = ele
+                                  error = value[i]
                                   break
+
                                else:
                                    flag = False
-                                   for key, value in six.iteritems(get_value):
-                                       if key == ele:
-                                           get_value = value
+                                   for k, v in six.iteritems(get_value):
+                                       if k == value[i]:
+                                           get_value = v
                                            flag = True
                                            break
+
                                    if not flag:
-                                      error = ele
+                                      error = value[i]
                                       break
-                       elif type(ele) == int: # in case of a list, which position
+
+                       elif type(value[i]) == int: # in case of a list, which position
                            pass
-                       elif type(ele) == dict: # nested get_
-                           kv = ele.items()[0]
-                           if not self.classify_items(kv[0]. kv[1], name):
-                               error = ele
+
+                       elif type(value[i]) == dict: # nested get_
+                           kv = value[i].items()[0]
+                           
+                           if type(self.parent) == YAML_HotValidator.YAML_Hotfile:
+                              get_value = self.parent.classify_items(kv[0]. kv[1], name)
+                              if get_value is None:
+                                 error = value[i]
                        else:
-                           error = ele
+                           error = value[i]
 
                 if error is not None:
                     # Add it to invalid references
@@ -293,11 +304,12 @@ class YAML_HotValidator:
                                         YAML_HotValidator.YAML_Types.GET_PARAM, None))
                     self.ok = False
                     return None
+
                 else:
                    # Return reference value
                    return get_value
    
-            else:
+            elif type(value) == str:
                 # Check if it is a pseudoparameter
                 if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
                     if value not in [x.name for x in self.params]:
@@ -314,7 +326,12 @@ class YAML_HotValidator:
                         if par.used == False:
                             par.used = True
                         return par
-            
+            else:
+                 # Add it to invalid references
+                 self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
+                                     YAML_HotValidator.YAML_Types.GET_PARAM, None))
+                 self.ok = False
+                 return None
         def check_get_resource(self, value, name):
             ''' Validates get_resource
                 value - reference
@@ -481,7 +498,7 @@ class YAML_HotValidator:
                 #print (get_value)
                 return get_value
             else:
-                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name + ' ' + value[0],
+                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name + ' - output of ' + value[0],
                                     YAML_HotValidator.YAML_Types.GET_ATTR, None))
                 self.ok = False
                 return None
@@ -933,16 +950,16 @@ class YAML_HotValidator:
                 print('')
 
                 # Print children nodes
-                if [True for x in node.resources if x.child is not None]:
-                    if self.pretty_format:
-                        print(YAML_colours.BOLD + 'Children:' + YAML_colours.DEFAULT)
-                    else:
-                        print('Children:')
+                #if [True for x in node.resources if x.child is not None]:
+                #    if self.pretty_format:
+                #        print(YAML_colours.BOLD + 'Children:' + YAML_colours.DEFAULT)
+                #    else:
+                #        print('Children:')
 
-                    for res in node.resources:
-                        if res.child is not None:
-                            print('- ' + res.child.path)
-                    print('')
+                #    for res in node.resources:
+                #        if res.child is not None:
+                #            print('- ' + res.child.path)
+                #    print('')
 
                 # Invalid references
                 if node.invalid:
