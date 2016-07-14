@@ -137,7 +137,7 @@ class YAML_HotValidator:
             # Save name and structure of each resource
             if 'resources' in self.structure:
                 for resource in self.structure['resources']:
-                    self.resources.append(YAML_HotValidator.YAML_Resource(resource,
+                    self.resources.append(YAML_HotValidator.YAML_Resource(resource, self,
                                           self.structure['resources'][resource]))
 
             # Save outputs
@@ -228,38 +228,39 @@ class YAML_HotValidator:
                         root = p
                 if root is None:
                     error = value[0]
+                    #print ('error get_param 1')
 
                 # Get its value
                 if error is None:
-                   # Try validating based on property
-                   get_value = None
-                   #print (root.value)
-                   if root.value is not None:
-                       if type(root.value) == str:
-                           get_value = root.value
-                       elif type(root.value) == dict:
-                           kv = root.value.items()[0]
-                           #print (kv)
-                           if (kv[0] == 'str_replace'):
-                               get_value = self.str_replace(kv)
-                               if get_value is None:
-                                 error = value[0]
-                           else:
-                              if type(self.parent) == YAML_HotValidator.YAML_Hotfile:
-                                 get_value = self.parent.classify_items(kv[0], kv[1], name)
-                                 if get_value is None:
-                                     error = value[0]
 
-                              if get_value is None:
+                    # Try validating based on property
+                    get_value = None
+                    if root.value is not None:
+                         if type(root.value) == str:
+                              get_value = root.value
+                         elif type(root.value) == dict:
+
+                             # Get all nested get_ from property
+                             get_value = root.value
+                             while ((type(get_value) == dict) and
+                                 (len(get_value.items()) == 1) and
+                                 ('get_' in get_value.keys()[0])):
+
+                                 if isinstance(self.parent, YAML_HotValidator.YAML_Hotfile):
+                                     get_value = self.parent.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                                     #print (self.parent.path, kv, get_value)
+
+                             if get_value is None:
                                  error = value[0]
+                                 #print ('error get_param 3', value)
                                  
-
-                   else: # validate based on parameter only
-                       if root.default is not None:
-                           get_value = root.default
-                       else:
-                           error = value[0]
-                #print ('value', get_value)
+                    # Validate based on parameter only
+                    else:
+                        if root.default is not None:
+                            get_value = root.default
+                        else:
+                            error = value[0]
+                            #print ('error get_param 4')
 
                 # Get value of the rest of the hierarchy
                 if error is None:
@@ -271,6 +272,7 @@ class YAML_HotValidator:
                                # Try finding value of key in current structure
                                if type(get_value) is not dict:
                                   error = value[i]
+                                  #print ('error get_param 5', get_value)
                                   break
 
                                else:
@@ -283,6 +285,7 @@ class YAML_HotValidator:
 
                                    if not flag:
                                       error = value[i]
+                                      #print ('error get_param 6')
                                       break
 
                        elif type(value[i]) == int: # in case of a list, which position
@@ -294,8 +297,10 @@ class YAML_HotValidator:
                            if type(self.parent) == YAML_HotValidator.YAML_Hotfile:
                               get_value = self.parent.classify_items(kv[0]. kv[1], name)
                               if get_value is None:
+                                 #print ('error get_param 7')
                                  error = value[i]
                        else:
+                           #print ('error get_param 8')
                            error = value[i]
 
                 if error is not None:
@@ -313,7 +318,6 @@ class YAML_HotValidator:
                 # Check if it is a pseudoparameter
                 if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
                     if value not in [x.name for x in self.params]:
-   
                         # Add it to invalid references
                         self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
                                              YAML_HotValidator.YAML_Types.GET_PARAM, None))
@@ -325,7 +329,8 @@ class YAML_HotValidator:
                         par = [x for x in self.params if x.name == value][0]
                         if par.used == False:
                             par.used = True
-                        return par
+                        # Returns parameter value or default value
+                        return (par.value if par.value is not None else par.default)
             else:
                  # Add it to invalid references
                  self.invalid.append(YAML_HotValidator.YAML_Reference(value, name,
@@ -361,7 +366,8 @@ class YAML_HotValidator:
             if type(value) == list:
 
                 if len(value) < 2:
-                    error = value
+                    error = value[0]
+                    #print ('error get_attr 1')
 
                 # Root is a resource - find root
                 if error is None:
@@ -373,12 +379,15 @@ class YAML_HotValidator:
 
                     if get_value is None:
                         error = value[0]
+                        #print ('error get_attr 2')
 
                 if error is None:
                     # Find output and its value
 
                     # If child node is not a yaml file, return non-None value
-                    if not get_value.type.endswith('.yaml'):
+                    if get_value.child is None:
+                        #if 'EndpointMap' in value:
+                            #print ('get_attr nonYAML', value, get_value, get_value.name)
                         return get_value
 
                     # resource.<name> used
@@ -392,8 +401,8 @@ class YAML_HotValidator:
                                 break
                         if not flag:
                             error = value[1]
+                            print ('error get_attr 3')
                         else:
-                            #print (get_value)
                             return get_value
                                 
                     # outputs_list used in case of autoscaling group TODO ASG x RG
@@ -410,6 +419,7 @@ class YAML_HotValidator:
 
                         if not flag:
                             error = value[1]
+                            #print ('error get_attr 4')
                         else:
                             # If the value is in get_, validate nested get_
                             if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
@@ -417,19 +427,36 @@ class YAML_HotValidator:
                                 get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
                                 if get_value is None:
                                     error = value[1] # TODO tag nested
+                                    #print ('error get_attr 5')
 
                             # Validate rest of the hierarchy
                             if error is None:
                                 for i in range(3, len(value)):
                                     if type(get_value) != dict:
                                         error = value[i]
+                                        #print ('error get_attr 6')
                                         break
 
-                                    if value[i] in get_value:
+                                    # Nested get_
+                                    if ((type(value[i]) == dict) and
+                                        ('get_' in value[i].keys())):
+                                        nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
+                                        if ((nested_get_value is None) or
+                                            (type(nested_get_value) != str) or
+                                            (nested_get_value not in get_value.keys())):
+                                            error = 'nested ' + value[i].keys()[0]
+                                            #print ('error get_attr 7')
+                                            break
+                                        else:
+                                            get_value = get_value[nested_get_value]
+                                
+                                    elif ((type(value[i]) == str) and
+                                          (value[i] in get_value.keys())):
                                         get_value = get_value[value[i]]
                                     else:
-                                       error = value[i]
-                                       break
+                                        error = (value[i] if type(value[i]) == str else 'nested ' + value[i].keys()[0])
+                                        #print ('error get_attr 8')
+                                        break
 
                             if error is None:
                                 return get_value
@@ -447,7 +474,7 @@ class YAML_HotValidator:
                                 break
                         if not flag:
                             error = value[1]
-
+                            print ('error get_attr 9')
                         if error is None:
                             # Go to value section of the output
                             if ((type(get_value) == dict) and
@@ -455,7 +482,9 @@ class YAML_HotValidator:
                                 get_value = get_value['value']
                             else:
                                 error = value[1]
+                                #print ('error get_attr 10')
 
+                        # Value can be dictionary or string
                         if error is None:
                             if type(get_value) == dict:
                                 # str_replace or list_join
@@ -469,35 +498,54 @@ class YAML_HotValidator:
                                       get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
                                       if get_value is None:
                                           error = value[1]
+                                          #print ('error get_attr 11')
 
                                 # else - structured value
-                            else:
-                                # can it be something different than a dict?
+                            elif type(get_value) != str:
                                 error = value[1]
+                                #print ('error get_attr 12')
 
                         if error is None:
                             # Get subvalues of value from other elements of the get_attr list
                             for i in range(2, len(value)):
                                 if type(get_value) != dict:
                                     error = value[i]
+                                    #print ('error get_attr 13')
                                     break
-   
-                                if value[i] in get_value:
+
+                                # Nested get_
+                                if ((type(value[i]) == dict) and
+                                    ('get_' in value[i].keys())):
+                                    nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
+                                    if ((nested_get_value is None) or
+                                        (type(nested_get_value) != str) or
+                                        (nested_get_value not in get_value.keys())):
+                                        error = 'nested ' + value[i].keys()[0]
+                                        #print ('error get_attr 14')
+                                        break
+                                    else:
+                                        get_value = get_value[nested_get_value]
+                                
+                                elif ((type(value[i]) == str) and
+                                      (value[i] in get_value.keys())):
                                     get_value = get_value[value[i]]
                                 else:
-                                    error = value[i]
+                                    error = (value[i] if type(value[i]) == str else 'nested ' + value[i].keys()[0])
+                                    print ('error get_attr 15')
                                     break
 
 
             # Is there any other format of get_attr than a list?
             else:
-                error = value
+                error = 'type of get_attr value is ' + type(value)
+                #print ('error get_attr 16')
 
             # Return value or None
             if error is None:
                 #print (get_value)
                 return get_value
             else:
+                #print ('error get_attr', name, error)
                 self.invalid.append(YAML_HotValidator.YAML_Reference(error, name + ' - output of ' + value[0],
                                     YAML_HotValidator.YAML_Types.GET_ATTR, None))
                 self.ok = False
@@ -519,6 +567,7 @@ class YAML_HotValidator:
                         self.ok = False
                 # Missing parameter for property
                 elif diff in [x.name for x in resource.properties]:
+                    #print ('missing param for property', diff, resource.name)
                     self.invalid.append(YAML_HotValidator.YAML_Reference(diff, resource.name,
                                         YAML_HotValidator.YAML_Types.MISS_PARAM, self.path))
                     self.ok = False
@@ -559,12 +608,13 @@ class YAML_HotValidator:
 
     class YAML_Resource:
         ''' Stores useful info about resource, its structure. '''
-        def __init__(self, name, resource_struct):
+        def __init__(self, name, hotfile, resource_struct):
 
             self.type = resource_struct['type']
-            self.child = None    # child node
-            self.name = name     # name of resource variable
-            self.properties = [] # list of YAML_ParProp
+            self.child = None      # child node
+            self.name = name       # name of resource variable
+            self.hotfile = hotfile # name of file containing resource
+            self.properties = []   # list of YAML_ParProp
 
             self.isGroup = False # is it a group type
             self.grouptype = ''
@@ -582,13 +632,13 @@ class YAML_HotValidator:
                     self.grouptype = self.type;
                     self.type = resource_struct['properties']['resource' if
                                 self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['type']
+                    #print (self.name, self.type)
                     for prop in resource_struct['properties']['resource' if
                                 self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['properties'].items():
                         self.properties.append(YAML_HotValidator.YAML_Prop_Par(prop, False))
                 else:
                     for prop in resource_struct['properties'].items():
                         self.properties.append(YAML_HotValidator.YAML_Prop_Par(prop, False))
-                        #print (prop)
 
             self.used = False
 
@@ -721,6 +771,8 @@ class YAML_HotValidator:
                                     ((type(mapped) == list) and (m.path == mapped[0]))
                                     and (m.parent == env)):
                                     res.child = m
+                                    m.parent = res.hotfile
+                                    #print (res.type + ' type is mapped to file ' + res.child.path)
                                     flag = True
                                     break
                         if flag:
