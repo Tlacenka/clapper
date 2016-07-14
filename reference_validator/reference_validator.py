@@ -394,20 +394,47 @@ class YAML_HotValidator:
                     if value[1].startswith('resource.'):
                         string = value[1].split('.')
                         flag = False
-                        for r in get_value.child.resources:
-                            if string[1] == r.name:
-                                get_value = r
+                        if r.grouptype == '':
+                            for r in get_value.child.resources:
+                                if string[1] == r.name:
+                                    get_value = r
+                                    flag = True
+                                    break
+                        # TODO longer hierarchy
+                        elif r.grouptype == 'OS::Heat::ResourceGroup':
+                            for k, v in six.iteritems(get_value.child.outputs):
+                                if ((string[2] == k) and (type(v) == dict) and
+                                    ('value' in v.keys())):
+                                    get_value = v['value']
+                                    flag = True
+                                    break
+                                
+                        if not flag:
+                            error = value[1]
+                            #print ('error get_attr 3')
+                        else:
+                            return get_value
+
+                     # TODO longer hierarchy
+                     # "attributes" vrati u ResourceGroup { "server0" -> {"name": ..., "ip": ...}, "server1" -> {"name": ..., "ip": ...} }
+                     # - slovnik kde klice jsou jmena resources v te resource group a hodnoty jsou atributy tech resourcu 
+                    elif ((get_value.grouptype == 'OS::Heat::ResourceGroup') and
+                          (len(value) >= 3) and (value[1] == 'attributes')):
+                        for k, v in six.iteritems(get_value.child.outputs):
+                            if ((value[2] == k) and (type(v) == dict) and
+                                    ('value' in v.keys())):
+                                get_value = v['value']
                                 flag = True
                                 break
                         if not flag:
                             error = value[1]
-                            print ('error get_attr 3')
+                            #print ('error get_attr 3')
                         else:
                             return get_value
-                                
-                    # outputs_list used in case of autoscaling group TODO ASG x RG
-                    elif (get_value.isGroup and (len(value) >= 3) and
-                          (value[1] == 'outputs_list')):
+
+                    # outputs_list used in case of autoscaling group TODO list?
+                    elif ((get_value.grouptype == 'OS::Heat::AutoScalingGroup') and
+                          (len(value) >= 3) and (value[1] == 'outputs_list')):
                         flag = False
                         for k, v in six.iteritems(get_value.child.outputs):
                             if ((k == value[2]) and (type(v) is dict) and
@@ -439,7 +466,7 @@ class YAML_HotValidator:
 
                                     # Nested get_
                                     if ((type(value[i]) == dict) and
-                                        ('get_' in value[i].keys())):
+                                        ('get_' in value[i].keys()[0])):
                                         nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
                                         if ((nested_get_value is None) or
                                             (type(nested_get_value) != str) or
@@ -454,7 +481,10 @@ class YAML_HotValidator:
                                           (value[i] in get_value.keys())):
                                         get_value = get_value[value[i]]
                                     else:
-                                        error = (value[i] if type(value[i]) == str else 'nested ' + value[i].keys()[0])
+                                        if type(value[i]) == str:
+                                            error = value[i]
+                                        else:
+                                            error = 'nested ' + value[i].keys()[0] + ' - ' + value[i].values()[0][0]
                                         #print ('error get_attr 8')
                                         break
 
@@ -515,7 +545,7 @@ class YAML_HotValidator:
 
                                 # Nested get_
                                 if ((type(value[i]) == dict) and
-                                    ('get_' in value[i].keys())):
+                                    ('get_' in value[i].keys()[0])):
                                     nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
                                     if ((nested_get_value is None) or
                                         (type(nested_get_value) != str) or
@@ -530,8 +560,11 @@ class YAML_HotValidator:
                                       (value[i] in get_value.keys())):
                                     get_value = get_value[value[i]]
                                 else:
-                                    error = (value[i] if type(value[i]) == str else 'nested ' + value[i].keys()[0])
-                                    print ('error get_attr 15')
+                                    if type(value[i]) == str:
+                                        error = value[i]
+                                    else:
+                                        error = 'nested ' + value[i].keys()[0] + ' - ' + value[i].values()[0][0]
+                                    #print ('error get_attr 15')
                                     break
 
 
@@ -546,7 +579,8 @@ class YAML_HotValidator:
                 return get_value
             else:
                 #print ('error get_attr', name, error)
-                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name + ' - output of ' + value[0],
+                self.invalid.append(YAML_HotValidator.YAML_Reference(error, name +
+                                    ' - output of ' + value[0],
                                     YAML_HotValidator.YAML_Types.GET_ATTR, None))
                 self.ok = False
                 return None
