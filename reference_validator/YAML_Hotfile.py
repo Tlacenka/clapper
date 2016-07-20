@@ -153,7 +153,6 @@ class YAML_Hotfile:
                     root = p
             if root is None:
                 error = value[0]
-                #print ('error get_param 1')
 
             # Get its value
             if error is None:
@@ -177,7 +176,6 @@ class YAML_Hotfile:
 
                          if get_value is None:
                              error = value[0]
-                             #print ('error get_param 3', value)
 
                 # Validate based on parameter only
                 else:
@@ -185,7 +183,6 @@ class YAML_Hotfile:
                         get_value = root.default
                     else:
                         error = value[0]
-                        #print ('error get_param 4')
 
             # Get value of the rest of the hierarchy
             if error is None:
@@ -197,7 +194,6 @@ class YAML_Hotfile:
                            # Try finding value of key in current structure
                            if type(get_value) is not dict:
                               error = value[i]
-                              #print ('error get_param 5', get_value)
                               break
 
                            else:
@@ -210,7 +206,6 @@ class YAML_Hotfile:
 
                                if not flag:
                                   error = value[i]
-                                  #print ('error get_param 6')
                                   break
 
                    elif type(value[i]) == int: # in case of a list, which position
@@ -222,10 +217,8 @@ class YAML_Hotfile:
                        if type(self.parent) == YAML_Hotfile:
                           get_value = self.parent.classify_items(kv[0]. kv[1], name)
                           if get_value is None:
-                             #print ('error get_param 7')
                              error = value[i]
                    else:
-                       #print ('error get_param 8')
                        error = value[i]
 
             if error is not None:
@@ -299,7 +292,6 @@ class YAML_Hotfile:
 
             if len(value) < 2:
                 error = value[0]
-                #print ('error get_attr 1')
 
             # Root is a resource - find root
             if error is None:
@@ -311,7 +303,6 @@ class YAML_Hotfile:
 
                 if get_value is None:
                     error = value[0]
-                    #print ('error get_attr 2')
 
             cur_resource = get_value # for flagging usage
 
@@ -344,7 +335,6 @@ class YAML_Hotfile:
 
                     if not flag:
                         error = value[1]
-                        #print ('error get_attr 3')
                     else:
                         cur_resource.used = True
                         return get_value
@@ -363,7 +353,6 @@ class YAML_Hotfile:
 
                     if not flag:
                         error = value[1]
-                        #print ('error get_attr 3')
                     else:
                         cur_resource.used = True
                         return get_value
@@ -382,7 +371,6 @@ class YAML_Hotfile:
 
                     if not flag:
                         error = value[1]
-                        #print ('error get_attr 4')
                     else:
                         # If the value is in get_, validate nested get_
                         if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
@@ -390,14 +378,12 @@ class YAML_Hotfile:
                             get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
                             if get_value is None:
                                 error = value[1] # TODO tag nested
-                                #print ('error get_attr 5')
 
                         # Validate rest of the hierarchy
                         if error is None:
                             for i in range(3, len(value)):
                                 if type(get_value) != dict:
                                     error = value[i]
-                                    #print ('error get_attr 6')
                                     break
 
                                 # Nested get_
@@ -408,7 +394,6 @@ class YAML_Hotfile:
                                         (type(nested_get_value) != str) or
                                         (nested_get_value not in get_value.keys())):
                                         error = 'nested ' + list(value[i].keys())[0]
-                                        #print ('error get_attr 7')
                                         break
                                     else:
                                         get_value = get_value[nested_get_value]
@@ -421,7 +406,6 @@ class YAML_Hotfile:
                                         error = value[i]
                                     else:
                                         error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
-                                    #print ('error get_attr 8')
                                     break
 
                         if error is None:
@@ -441,7 +425,6 @@ class YAML_Hotfile:
                             break
                     if not flag:
                         error = value[1]
-                        print ('error get_attr 9')
                     if error is None:
                         # Go to value section of the output
                         if ((type(get_value) == dict) and
@@ -449,7 +432,6 @@ class YAML_Hotfile:
                             get_value = get_value['value']
                         else:
                             error = value[1]
-                            #print ('error get_attr 10')
 
                     # Value can be dictionary or string
                     if error is None:
@@ -465,19 +447,16 @@ class YAML_Hotfile:
                                   get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
                                   if get_value is None:
                                       error = value[1]
-                                      #print ('error get_attr 11')
 
                             # else - structured value
                         elif type(get_value) != str:
                             error = value[1]
-                            #print ('error get_attr 12')
 
                     if error is None:
                         # Get subvalues of value from other elements of the get_attr list
                         for i in range(2, len(value)):
                             if type(get_value) != dict:
                                 error = value[i]
-                                #print ('error get_attr 13')
                                 break
 
                             # Nested get_
@@ -488,7 +467,6 @@ class YAML_Hotfile:
                                     (type(nested_get_value) != str) or
                                     (nested_get_value not in get_value.keys())):
                                     error = 'nested ' + list(value[i].keys())[0]
-                                    #print ('error get_attr 14')
                                     break
                                 else:
                                     get_value = get_value[nested_get_value]
@@ -501,7 +479,6 @@ class YAML_Hotfile:
                                     error = value[i]
                                 else:
                                     error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
-                                #print ('error get_attr 15')
                                 break
 
 

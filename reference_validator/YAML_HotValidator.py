@@ -151,7 +151,6 @@ class YAML_HotValidator:
                                     and (m.parent == env)):
                                     res.child = m
                                     m.parent = res.hotfile
-                                    #print (res.type + ' type is mapped to file ' + res.child.path)
                                     flag = True
                                     break
                         if flag:
