@@ -92,6 +92,7 @@ class YAML_Resource:
 
         # If there are properties, save them
         if 'properties' in value:
+
             # Type and properties of the individual resource
             if self.isGroup:
                 self.grouptype = self.type

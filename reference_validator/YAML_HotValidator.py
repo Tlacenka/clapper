@@ -45,7 +45,7 @@ class YAML_HotValidator:
         self.curr_nodes = []
 
         # Applied parameters
-        self.print_unused = arguments['unused']
+        self.print_unused = arguments['print_unused']
         self.pretty_format = arguments['pretty_format']
         self.print_structure = arguments['print_tree']
         self.print_nyan = (sys.version_info[0] == 2) and arguments['nyan']
@@ -91,9 +91,12 @@ class YAML_HotValidator:
                     if type(custom) == str:
                         env_node.resource_registry[origin] = custom
                     elif origin == 'resources':
+
                         # Find if there is any mapping (hooks etc are not important)
                         for res in env_node.structure['resource_registry']['resources'].keys():
-                            for key, value in six.iteritems(env_node.structure['resource_registry']['resources'][res]):
+                            for key, value in six.iteritems(
+                                env_node.structure['resource_registry']['resources'][res]):
+
                                 # Add indirect mapping using regexp - multiple indentations
                                 if (type(value) == str) and (value.endswith('.yaml')):
                                     env_code.resource_registry[key] = [value, res]
@@ -189,6 +192,7 @@ class YAML_HotValidator:
 
         # Go through all resources in current template
         for resource in template.resources:
+
             # Continue with child nodes
             if resource.child is not None:
                 resource.child.check_prop_par(template, resource,
@@ -198,18 +202,16 @@ class YAML_HotValidator:
         # Remove node from current nodes after validation
         self.curr_nodes.remove(self)
 
-        # TODO get value of properties for future use
-
 
     def validate_references(self, root):
         ''' Validates references in file '''
 
         # Validate parent
         root.validate_file(self.curr_nodes)
-        #print(root.path)
 
         # Go through all resources in current template
         for resource in root.resources:
+
             # Continue with child nodes
             if resource.child is not None:
                 resource.child.validate_file(self.curr_nodes)
@@ -251,13 +253,21 @@ class YAML_HotValidator:
                 if firstindex is None:
                     firstindex = root.resources.index(r)
 
-        child_position = (ENUM.YAML_tree_info.ONLY if ((lastindex is not None) and (lastindex == firstindex)) else ENUM.YAML_tree_info.OTHER)
-        branch_list = branch_list + ([indent-1] if root_position != ENUM.YAML_tree_info.ONLY else [])
+        # Determine child position
+        if ((lastindex is not None) and (lastindex == firstindex)):
+            child_position = ENUM.YAML_tree_info.ONLY
+        else:
+            child_position = ENUM.YAML_tree_info.OTHER
+
+        # Add branch to indicate another |
+        if root_position != ENUM.YAML_tree_info.ONLY:
+            branch_list = branch_list + [indent-1]
 
         # Print subtrees of children
         for r in root.resources:
             if r.child is not None:
-                if ((child_position != ENUM.YAML_tree_info.ONLY) and (root.resources.index(r) == lastindex)):
+                if ((child_position != ENUM.YAML_tree_info.ONLY) and
+                    (root.resources.index(r) == lastindex)):
                     child_position = ENUM.YAML_tree_info.LAST
 
                 self.print_tree(r.child, child_position, indent, branch_list)
@@ -448,18 +458,6 @@ class YAML_HotValidator:
                     print('Parent: ' + (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 print('')
 
-                # Print children nodes
-                #if [True for x in node.resources if x.child is not None]:
-                #    if self.pretty_format:
-                #        print(ENUM.YAML_colours.BOLD + 'Children:' + ENUM.YAML_colours.DEFAULT)
-                #    else:
-                #        print('Children:')
-
-                #    for res in node.resources:
-                #        if res.child is not None:
-                #            print('- ' + res.child.path)
-                #    print('')
-
                 # Invalid references
                 if node.invalid:
                     if self.pretty_format:
@@ -579,6 +577,7 @@ class YAML_HotValidator:
 
                 print('\n')
 
+        # Print tree structure
         if self.print_structure:
             if self.pretty_format:
                 print(ENUM.YAML_colours.ORANGE + ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE +

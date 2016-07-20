@@ -171,8 +171,9 @@ class YAML_Hotfile:
                              ('get_' in list(get_value.keys())[0])):
 
                              if isinstance(self.parent, YAML_Hotfile):
-                                 get_value = self.parent.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
-                                 #print (self.parent.path, kv, get_value)
+                                 get_value = self.parent.classify_items(
+                                     list(get_value.keys())[0],
+                                     list(get_value.values())[0], name)
 
                          if get_value is None:
                              error = value[0]
@@ -188,7 +189,8 @@ class YAML_Hotfile:
             if error is None:
                for i in range(1, len(value)):
                    if type(value[i]) == str:
-                       if value[i].isdigit(): # TODO points to smth in a group, check if it is a group
+                       # TODO points to smth in a group, check if it is a group
+                       if value[i].isdigit():
                            pass
                        else:
                            # Try finding value of key in current structure
@@ -215,7 +217,7 @@ class YAML_Hotfile:
                        kv = value[i].items()[0]
 
                        if type(self.parent) == YAML_Hotfile:
-                          get_value = self.parent.classify_items(kv[0]. kv[1], name)
+                          get_value = self.parent.classify_items(kv[0], kv[1], name)
                           if get_value is None:
                              error = value[i]
                    else:
@@ -375,7 +377,10 @@ class YAML_Hotfile:
                         # If the value is in get_, validate nested get_
                         if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
                             ('get_' in list(get_value.keys())[0])):
-                            get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
+                            get_value = cur_file.classify_items(
+                                list(get_value.keys())[0],
+                                list(get_value.values())[0], name)
+
                             if get_value is None:
                                 error = value[1] # TODO tag nested
 
@@ -389,7 +394,10 @@ class YAML_Hotfile:
                                 # Nested get_
                                 if ((type(value[i]) == dict) and
                                     ('get_' in list(value[i].keys())[0])):
-                                    nested_get_value = self.classify_items(list(value[i].keys())[0], list(value[i].values())[0], name)
+                                    nested_get_value = self.classify_items(
+                                        list(value[i].keys())[0],
+                                        list(value[i].values())[0], name)
+
                                     if ((nested_get_value is None) or
                                         (type(nested_get_value) != str) or
                                         (nested_get_value not in get_value.keys())):
@@ -444,7 +452,10 @@ class YAML_Hotfile:
                             # get_
                             elif ((len(get_value.keys()) == 1) and
                                   ('get_' in list(get_value.keys())[0])):
-                                  get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
+                                  get_value = cur_file.classify_items(
+                                      list(get_value.keys())[0],
+                                      list(get_value.values())[0], name)
+
                                   if get_value is None:
                                       error = value[1]
 
@@ -462,7 +473,10 @@ class YAML_Hotfile:
                             # Nested get_
                             if ((type(value[i]) == dict) and
                                 ('get_' in list(value[i].keys())[0])):
-                                nested_get_value = self.classify_items(list(value[i].keys())[0], list(value[i].values())[0], name)
+                                nested_get_value = self.classify_items(
+                                    list(value[i].keys())[0],
+                                    list(value[i].values())[0], name)
+
                                 if ((nested_get_value is None) or
                                     (type(nested_get_value) != str) or
                                     (nested_get_value not in get_value.keys())):
@@ -485,17 +499,14 @@ class YAML_Hotfile:
         # Is there any other format of get_attr than a list?
         else:
             error = 'type of get_attr value is ' + type(value)
-            #print ('error get_attr 16')
 
         # Return value or None
         if error is None:
-            #print (get_value)
             cur_resource.used = True
             return get_value
         else:
-            #print ('error get_attr', name, error)
-            self.invalid.append(YAML_HotClasses.YAML_Reference(error, name +
-                                ' - output of ' + value[0],
+            self.invalid.append(YAML_HotClasses.YAML_Reference(error,
+                                name + ' - output of ' + value[0],
                                 ENUM.YAML_Types.GET_ATTR, None))
             self.ok = False
             return None
@@ -519,7 +530,8 @@ class YAML_Hotfile:
                     flag = True
 
                     if (p.default is None):
-                        self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
+                        self.invalid.append(YAML_HotClasses.YAML_Reference(
+                                            diff, resource.name,
                                             ENUM.YAML_Types.MISS_PROP, parent.path))
                         self.ok = False
                         break
@@ -529,7 +541,8 @@ class YAML_Hotfile:
             if not flag:
                 for p in resource.properties:
                     if diff == p.name:
-                        self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
+                        self.invalid.append(YAML_HotClasses.YAML_Reference(
+                                        diff, resource.name,
                                         ENUM.YAML_Types.MISS_PARAM, self.path))
                         self.ok = False
                         break

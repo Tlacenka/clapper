@@ -17,7 +17,7 @@ def main():
 
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('-u', '--unused', action='store_true',
+    parser.add_argument('-u', '--print-unused', action='store_true',
                         help='When true, prints all unused resources/parameters.')
     parser.add_argument('-p', '--pretty-format', action='store_true',
                         help='When true, provides colourful output')
