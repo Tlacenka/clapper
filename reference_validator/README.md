@@ -19,14 +19,12 @@ It is currently under development but it should be already able to validate most
     $ python[3] reference_validator.py -f <path/to/yaml/root template> -e <path/to/yaml/environment file> [<another/path/to/env/files>] [-p/--pretty-format] [-u/--unused] [-n/--nyan] [-h/--help] [-t/--print-tree]
 
 <h3> Parameters </h3>
-<ul>
-<li> `` -f`` is an absolute/relative path to root HOT template. </li>
-<li> `` -e`` is an absolute/relative path to environment file(s). </li>
-<li> `` -p/--pretty-format`` when selected, the output is colourful. </li>
-<li> `` -u/--unused`` causes printing additional info (unused instances without reference).</li>
-<li> `` -n/--nyan`` causes printing nyanbar.</li>
-<li> `` -t/--print-tree`` when selected, output also contains tree template structure.</li>
-</ul>
+ - ``-f`` is an absolute/relative path to root HOT template
+ - ``-e`` is an absolute/relative path to environment file(s)
+ - ``-p/--pretty-format`` when selected, the output is colourful
+ - ``-u/--unused`` causes printing additional info (unused instances without reference)
+ - ``-n/--nyan`` causes printing nyanbar
+ - ``-t/--print-tree`` when selected, output also contains tree template structure
 
 <h2> Output </h2>
 Script prints the result to standard output. The result contains a list of all associated files containing invalid references and info about involved instances.
