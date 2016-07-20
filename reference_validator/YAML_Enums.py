@@ -34,3 +34,8 @@ class YAML_Types:
     MISS_PROP  = 4    # parameter in file B does not have corresponding property in file A
     MISS_PARAM = 5    # property in file A does not have corresponding parameter in file B
     DEPENDS_ON = 6    # resource that other resource depends on does not exist
+
+class YAML_Grouptypes:
+    ''' Resource types for groups of resources '''
+    ASG = 'OS::Heat::AutoScalingGroup'
+    RG = 'OS::Heat::ResourceGroup'

@@ -25,7 +25,6 @@ class YAML_Hotfile:
         self.path = abs_path
 
         self.parent = parent_node   # Parent node or nothing in the case of root node
-        self.children = []          # Ordered children - by the moment of appearance in the code
 
         self.resources = []         # YAML_Resource list
         self.params = []            # list of YAML_Prop_Par
@@ -50,10 +49,8 @@ class YAML_Hotfile:
             with open(os.path.join(curr_path, self.path), 'r') as fd:
                 self.structure = yaml.load(fd.read())
         except IOError:
-            print('File ' + self.path + ' could not be opened.')
+            print('File ' + self.path + ' could not be opened.', file=sys.stderr)
             sys.exit(1)
-
-        #print (self.structure)
 
         # Save all parameters names, resources and properties
         if 'parameters' in self.structure:
@@ -62,14 +59,13 @@ class YAML_Hotfile:
 
         # Save name and structure of each resource
         if 'resources' in self.structure:
-            for resource in self.structure['resources']:
-                self.resources.append(YAML_HotClasses.YAML_Resource(resource, self,
-                                      self.structure['resources'][resource]))
+            for key, value in six.iteritems(self.structure['resources']):
+                self.resources.append(YAML_HotClasses.YAML_Resource(key, value, self))
 
         # Save outputs
         if 'outputs' in self.structure:
-            for out in self.structure['outputs']:
-                self.outputs[out] = self.structure['outputs'][out]
+            for key, value in six.iteritems(self.structure['outputs']):
+                self.outputs[key] = value
 
         # Examine children nodes to get the full information about references
         for resource in self.resources:
@@ -77,7 +73,6 @@ class YAML_Hotfile:
                 templates.insert(0, YAML_Hotfile(self, resource.type))
 
                 # Add child
-                self.children.append(templates[0])
                 resource.child = templates[0]
 
                 # Start validating child
@@ -102,52 +97,53 @@ class YAML_Hotfile:
             if type(instances) == dict:
 
                 # Iterate over instances (variables)
-                for variable, properties in six.iteritems(instances):
-                    self.inspect_instances(properties, variable)
+                for key, value in six.iteritems(instances):
+                    self.validate_instances(key, value)
 
         # Check dependencies
-        self.check_depends_on()
-        
+        self.depends_on()
+
         # Remove node from current nodes after validation
         curr_nodes.remove(self)
 
-    def inspect_instances(self, properties, name):
+    def validate_instances(self, name, structure):
         ''' Check if all references to variables are valid.
-            properties - structures containing instance properties and their values
             name       - name of referring instance
+            structure - structure containing instance properties and their values
+            
         '''
 
-        if isinstance(properties, list):
-            for element in properties:
-                if isinstance(element, dict) or isinstance(element, list):
-                    self.inspect_instances(element, name)
-        elif isinstance(properties, dict):
-            # Check references, mark used variables
-            for key, value in six.iteritems(properties):
+        if isinstance(structure, list):
+            for s in structure:
+                if isinstance(s, dict) or isinstance(s, list):
+                    self.validate_instances(name, s)
+
+        elif isinstance(structure, dict):
+            # Classify references
+            for key, value in six.iteritems(structure):
                 if self.classify_items(key, value, name) is None:
-                    self.inspect_instances(value, name)
+                    self.validate_instances(name, value)
 
     def classify_items(self, key, value, name):
        ''' If item contains reference, it is processed. '''
 
        if key == 'get_param':
-           #print (value)
-           return self.check_get_parameter(value, name)
+           return self.get_param(value, name)
        elif key == 'get_resource':
-           return self.check_get_resource(value, name)
+           return self.get_resource(value, name)
        elif key == 'get_attr':
-           return self.check_get_attribute(value, name)
+           return self.get_attr(value, name)
        else:
            return None
 
 
-    def check_get_parameter(self, value, name):
+    def get_param(self, value, name):
         ''' Validates get_param
             value - reference
             name - instance name
         '''
         if type(value) == list:
-            
+
             error = None
 
             # Get root - parameter and its structure
@@ -182,7 +178,7 @@ class YAML_Hotfile:
                          if get_value is None:
                              error = value[0]
                              #print ('error get_param 3', value)
-                             
+
                 # Validate based on parameter only
                 else:
                     if root.default is not None:
@@ -222,7 +218,7 @@ class YAML_Hotfile:
 
                    elif type(value[i]) == dict: # nested get_
                        kv = value[i].items()[0]
-                       
+
                        if type(self.parent) == YAML_Hotfile:
                           get_value = self.parent.classify_items(kv[0]. kv[1], name)
                           if get_value is None:
@@ -273,7 +269,7 @@ class YAML_Hotfile:
              return None
 
 
-    def check_get_resource(self, value, name):
+    def get_resource(self, value, name):
         ''' Validates get_resource
             value - reference
             name - instance name
@@ -291,7 +287,7 @@ class YAML_Hotfile:
         return None
 
 
-    def check_get_attribute(self, value, name):
+    def get_attr(self, value, name):
         ''' Validates get_attr
             value - reference
             name - instance name
@@ -345,7 +341,7 @@ class YAML_Hotfile:
                                 get_value = v['value']
                                 flag = True
                                 break
-                            
+
                     if not flag:
                         error = value[1]
                         #print ('error get_attr 3')
@@ -355,7 +351,7 @@ class YAML_Hotfile:
 
                  # TODO longer hierarchy
                  # "attributes" vrati u ResourceGroup { "server0" -> {"name": ..., "ip": ...}, "server1" -> {"name": ..., "ip": ...} }
-                 # - slovnik kde klice jsou jmena resources v te resource group a hodnoty jsou atributy tech resourcu 
+                 # - slovnik kde klice jsou jmena resources v te resource group a hodnoty jsou atributy tech resourcu
                 elif ((get_value.grouptype == 'OS::Heat::ResourceGroup') and
                       (len(value) >= 3) and (value[1] == 'attributes')):
                     for k, v in six.iteritems(get_value.child.outputs):
@@ -416,7 +412,7 @@ class YAML_Hotfile:
                                         break
                                     else:
                                         get_value = get_value[nested_get_value]
-                            
+
                                 elif ((type(value[i]) == str) and
                                       (value[i] in get_value.keys())):
                                     get_value = get_value[value[i]]
@@ -496,7 +492,7 @@ class YAML_Hotfile:
                                     break
                                 else:
                                     get_value = get_value[nested_get_value]
-                            
+
                             elif ((type(value[i]) == str) and
                                   (value[i] in get_value.keys())):
                                 get_value = get_value[value[i]]
@@ -531,55 +527,65 @@ class YAML_Hotfile:
     def check_prop_par(self, parent, resource, environments):
         ''' Check properties against parameters and vice versa, tag used. '''
 
+        # Find all differences - add to invalid references
+        # Find all matches - merge into one object
+
         # Get difference in names of properties and parameters
         differences = list(set([x.name for x in self.params]) ^ set([y.name for y in resource.properties]))
 
         for diff in differences:
-            # Missing property for parameter
-            if diff in [x.name for x in self.params]:
-                if [True for x in self.params if (x.name == diff) and (x.default is None)]:
-                    self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
-                                        ENUM.YAML_Types.MISS_PROP, parent.path))
-                    self.ok = False
-            # Missing parameter for property
-            elif diff in [x.name for x in resource.properties]:
-                #print ('missing param for property', diff, resource.name)
-                self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
-                                    ENUM.YAML_Types.MISS_PARAM, self.path))
-                self.ok = False
+            flag = False
 
-        # Get all matches
-        matches = list(set([x.name for x in self.params]) & set([y.name for y in resource.properties]))
+            # Missing property for parameter
+            for p in self.params:
+                if diff == p.name:
+                    flag = True
+
+                    if (p.default is None):
+                        self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
+                                            ENUM.YAML_Types.MISS_PROP, parent.path))
+                        self.ok = False
+                        break
+            
+                
+            # Missing parameter for property
+            if not flag:
+                for p in resource.properties:
+                    if diff == p.name:
+                        self.invalid.append(YAML_HotClasses.YAML_Reference(diff, resource.name,
+                                        ENUM.YAML_Types.MISS_PARAM, self.path))
+                        self.ok = False
+                        break
 
         # Share YAML_Prop_Par for each match
-        for m in matches:
-            # Finds parameter and property
-            prop = [x for x in resource.properties if x.name == m][0]
-            for p in range(len(self.params)):
-                if self.params[p].name == m:
-                    # Merges their attributes, prop and param share one object from now on
-                    prop.merge(self.params[p])
-                    self.params[p] = prop
-                    break
+        for par in range(len(self.params)):
+            for prop in resource.properties:
+                if self.params[par].name == prop.name:
+                    prop.merge(self.params[par])
+                    self.params[par] = prop
 
-    def check_depends_on(self):
+    def depends_on(self):
         ''' Sets resources which other resources depend on as used '''
-        for dependent in self.resources:
-            if 'depends_on' in dependent.structure:
+
+        for r in self.resources:
+            if 'depends_on' in r.structure:
                 flag = False
-                if type(dependent.structure['depends_on']) == str:
-                    dependencies = [dependent.structure['depends_on']]
+                if type(r.structure['depends_on']) == str:
+                    dependencies = [r.structure['depends_on']]
                 else:
-                    dependencies = dependent.structure['depends_on']
+                    dependencies = r.structure['depends_on']
+
+                # Check dependencies
                 for d in dependencies:
-                   for r in self.resources:
-                       if r.name == d:
-                           r.used = True
+                   for x in self.resources:
+                       if x.name == d:
+                           x.used = True
                            flag = True
                            break
 
                    if not flag:
+
                        # Searched resource does not exist
-                       self.invalid.append(YAML_HotClasses.YAML_Reference(d, dependent.name,
+                       self.invalid.append(YAML_HotClasses.YAML_Reference(d, r.name,
                                            ENUM.YAML_Types.DEPENDS_ON, None))
                        self.ok = False

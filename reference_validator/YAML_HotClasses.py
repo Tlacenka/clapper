@@ -19,17 +19,17 @@ class YAML_Env:
         self.path = abs_path
 
         # reference to parent and children nodes
-        self.parent = parent_node
-        self.children = []
+        self.parent = parent_node   # parent node
+        self.children = []          # children env files
 
         self.resource_registry = {} # original type: mapped type [, resource]
         self.params = {}            # additional parameters, only for root file -f
         self.params_default = {}    # default values, can replace property in property>param anywhere
 
-        self.structure = {}
+        self.structure = {}         # file structure
         self.invalid = []           # invalid parameter references
 
-        self.ok = True
+        self.ok = True              # validation status
 
 class YAML_Prop_Par:
     ''' Class for saving information about parameters and properties.
@@ -38,9 +38,10 @@ class YAML_Prop_Par:
     def __init__(self, structure, isPar):
         self.name = structure[0]    # name of parameter/property
         self.used = False           # flag of usage (reference)
+        self.type = None            # parameter type
+
         self.value = (None if isPar else structure[1]) # value (possibly structured)
-        self.default = None
-        self.type = None
+        self.default = None         # default value
 
         if isPar and ('type' in structure[1]):
             self.type = structure[1]['type']
@@ -69,38 +70,42 @@ class YAML_Prop_Par:
 
 class YAML_Resource:
     ''' Stores useful info about resource, its structure. '''
-    def __init__(self, name, hotfile, resource_struct):
+    def __init__(self, name, value, hot):
+        self.name = name                    # name of resource variable
+        self.structure = value              # resource structure
+        self.type = value['type']           # resource type (filename if mapped)
+        self.used = False                   # usage flag
 
-        self.structure = resource_struct
-        self.type = resource_struct['type']
-        self.child = None      # child node
-        self.name = name       # name of resource variable
-        self.hotfile = hotfile # name of file containing resource
-        self.properties = []   # list of YAML_ParProp
-        self.used = False      # usage flag
+        self.hotfile = hot                  # file containing resource
+        self.child = None                   # child node
+
+        self.properties = []                # list of YAML_ParProp
 
         self.isGroup = False # is it a group type
         self.grouptype = ''
 
-        if self.type in ['OS::Heat::AutoScalingGroup', 'OS::Heat::ResourceGroup']:
+        if self.type in [ENUM.YAML_Grouptypes.ASG, ENUM.YAML_Grouptypes.RG]:
             self.isGroup = True
 
         props = []
 
+
         # If there are properties, save them
-        # TODO save to YAML_Prop_Par, merge ASG and RG with ternary operator
-        if 'properties' in resource_struct:
+        if 'properties' in value:
             # Type and properties of the individual resource
             if self.isGroup:
-                self.grouptype = self.type;
-                self.type = resource_struct['properties']['resource' if
-                            self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['type']
-                #print (self.name, self.type)
-                for prop in resource_struct['properties']['resource' if
-                            self.grouptype == 'OS::Heat::AutoScalingGroup' else 'resource_def']['properties'].items():
+                self.grouptype = self.type
+                if self.grouptype == ENUM.YAML_Grouptypes.ASG:
+                    self.type = self.structure['properties']['resource']['type']
+                else:
+                    self.type = self.structure['properties']['resource_def']['type']
+
+                # Load properties
+                for prop in self.structure['properties'][('resource' if
+                            self.grouptype == ENUM.YAML_Grouptypes.ASG else 'resource_def')]['properties'].items():
                     self.properties.append(YAML_Prop_Par(prop, False))
             else:
-                for prop in resource_struct['properties'].items():
+                for prop in self.structure['properties'].items():
                     self.properties.append(YAML_Prop_Par(prop, False))
 
 

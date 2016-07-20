@@ -112,7 +112,7 @@ class YAML_HotValidator:
                 if ((type(child) == str and child.endswith('.yaml')) or
                     ((type(child) == list) and child[0].endswith('.yaml'))):
 
-                    # Is a file is created already as a root, no need for redundancy
+                    # If a file is created already as a root, no need for redundancy
                     found = False
                     for m in self.mappings:
                         if ((m.path == child) and (m.parent in self.environments)):
@@ -229,7 +229,7 @@ class YAML_HotValidator:
             print ((indent-cur_indent-1) * '   ', end="")
         elif root_position != ENUM.YAML_tree_info.ONLY:
             print ('\n' + (indent-1) * '   ', end="")
-                
+
         # Print child node
         if indent > 0:
             if root_position == ENUM.YAML_tree_info.ONLY:
