@@ -20,12 +20,12 @@ It is currently under development but it should be already able to validate most
 
 <h3> Parameters </h3>
 <ul>
-<li> ``-f`` is an absolute/relative path to root HOT template. </li>
-<li> ``-e`` is an absolute/relative path to environment file(s). </li>
-<li> ``-p/--pretty-format`` when selected, the output is colourful. </li>
-<li> ``-u/--unused`` causes printing additional info (unused instances without reference).</li>
-<li> ``-n/--nyan`` causes printing nyanbar.</li>
-<li> ``-t/--print-tree`` when selected, output also contains tree template structure.</li>
+<li> `` -f`` is an absolute/relative path to root HOT template. </li>
+<li> `` -e`` is an absolute/relative path to environment file(s). </li>
+<li> `` -p/--pretty-format`` when selected, the output is colourful. </li>
+<li> `` -u/--unused`` causes printing additional info (unused instances without reference).</li>
+<li> `` -n/--nyan`` causes printing nyanbar.</li>
+<li> `` -t/--print-tree`` when selected, output also contains tree template structure.</li>
 </ul>
 
 <h2> Output </h2>
@@ -37,5 +37,5 @@ Optionally, it also prints a list of all unused instances.
  - ``reference_validator.py`` contains the main file that runs the validation based on parameters
  - ``YAML_HotValidator.py`` contains corresponding class and encapsulates validator behaviour
  - ``YAML_Hotfile.py`` contains corresponding class that realizes the file validation itself
- - ``YAML_Enums.py`` contains all classes used for enumeration (YAML_colours, YAML_Types, YAML_tree_info)
- - ``YAML_HotClasses.py`` contains the rest of the classes used for validation (YAML_Env, YAML_Prop_Par, YAML_Resource, YAML_Reference)
+ - ``YAML_Enums.py`` contains all classes used for enumeration ( ``YAML_colours``, ``YAML_Types``, ``YAML_tree_info``)
+ - ``YAML_HotClasses.py`` contains the rest of the classes used for validation ( ``YAML_Env``, ``YAML_Prop_Par``, ``YAML_Resource``, ``YAML_Reference``)
