@@ -583,4 +583,3 @@ class YAML_Hotfile:
                        self.invalid.append(YAML_HotClasses.YAML_Reference(d, dependent.name,
                                            ENUM.YAML_Types.DEPENDS_ON, None))
                        self.ok = False
-        return True

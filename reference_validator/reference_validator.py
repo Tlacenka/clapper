@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# File: reference_valdator.py
+# File: reference_validator.py
 # Brief: Main file running HOT reference validator
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
