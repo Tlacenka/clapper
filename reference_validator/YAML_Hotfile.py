@@ -173,10 +173,10 @@ class YAML_Hotfile:
                          get_value = root.value
                          while ((type(get_value) == dict) and
                              (len(get_value.items()) == 1) and
-                             ('get_' in get_value.keys()[0])):
+                             ('get_' in list(get_value.keys())[0])):
 
                              if isinstance(self.parent, YAML_Hotfile):
-                                 get_value = self.parent.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                                 get_value = self.parent.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
                                  #print (self.parent.path, kv, get_value)
 
                          if get_value is None:
@@ -390,8 +390,8 @@ class YAML_Hotfile:
                     else:
                         # If the value is in get_, validate nested get_
                         if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
-                            ('get_' in get_value.keys()[0])):
-                            get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                            ('get_' in list(get_value.keys())[0])):
+                            get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
                             if get_value is None:
                                 error = value[1] # TODO tag nested
                                 #print ('error get_attr 5')
@@ -406,12 +406,12 @@ class YAML_Hotfile:
 
                                 # Nested get_
                                 if ((type(value[i]) == dict) and
-                                    ('get_' in value[i].keys()[0])):
-                                    nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
+                                    ('get_' in list(value[i].keys())[0])):
+                                    nested_get_value = self.classify_items(list(value[i].keys())[0], list(value[i].values())[0], name)
                                     if ((nested_get_value is None) or
                                         (type(nested_get_value) != str) or
                                         (nested_get_value not in get_value.keys())):
-                                        error = 'nested ' + value[i].keys()[0]
+                                        error = 'nested ' + list(value[i].keys())[0]
                                         #print ('error get_attr 7')
                                         break
                                     else:
@@ -424,7 +424,7 @@ class YAML_Hotfile:
                                     if type(value[i]) == str:
                                         error = value[i]
                                     else:
-                                        error = 'nested ' + value[i].keys()[0] + ' - ' + value[i].values()[0][0]
+                                        error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
                                     #print ('error get_attr 8')
                                     break
 
@@ -465,8 +465,8 @@ class YAML_Hotfile:
 
                             # get_
                             elif ((len(get_value.keys()) == 1) and
-                                  ('get_' in get_value.keys()[0])):
-                                  get_value = cur_file.classify_items(get_value.keys()[0], get_value.values()[0], name)
+                                  ('get_' in list(get_value.keys())[0])):
+                                  get_value = cur_file.classify_items(list(get_value.keys())[0], list(get_value.values())[0], name)
                                   if get_value is None:
                                       error = value[1]
                                       #print ('error get_attr 11')
@@ -486,12 +486,12 @@ class YAML_Hotfile:
 
                             # Nested get_
                             if ((type(value[i]) == dict) and
-                                ('get_' in value[i].keys()[0])):
-                                nested_get_value = self.classify_items(value[i].keys()[0], value[i].values()[0], name)
+                                ('get_' in list(value[i].keys())[0])):
+                                nested_get_value = self.classify_items(list(value[i].keys())[0], list(value[i].values())[0], name)
                                 if ((nested_get_value is None) or
                                     (type(nested_get_value) != str) or
                                     (nested_get_value not in get_value.keys())):
-                                    error = 'nested ' + value[i].keys()[0]
+                                    error = 'nested ' + list(value[i].keys())[0]
                                     #print ('error get_attr 14')
                                     break
                                 else:
@@ -504,7 +504,7 @@ class YAML_Hotfile:
                                 if type(value[i]) == str:
                                     error = value[i]
                                 else:
-                                    error = 'nested ' + value[i].keys()[0] + ' - ' + value[i].values()[0][0]
+                                    error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
                                 #print ('error get_attr 15')
                                 break
 
