@@ -40,6 +40,7 @@ class YAML_HotValidator:
         self.environments = []
         self.mappings = []
         self.templates = []
+        self.parameters = {}
 
         # Currently opened nodes
         self.curr_nodes = []
@@ -53,7 +54,7 @@ class YAML_HotValidator:
         self.printer = pprint.PrettyPrinter(indent=2)
 
         # Check HOT file (-f)
-        abs_path = os.path.abspath(arguments['file'])
+        abs_path = os.path.abspath(arguments['template_file'])
         if abs_path.endswith('yaml'):
             self.templates.insert(0, HOT.YAML_Hotfile(None, abs_path))
         else:
@@ -61,12 +62,23 @@ class YAML_HotValidator:
             sys.exit(1)
 
         # Check environment files (-e)
-        if arguments['environment']:
-            for env in list(arguments['environment']):
+        if arguments['environment_file']:
+            for env in list(arguments['environment_file']):
                 abs_path = os.path.abspath(env)
                 if abs_path.endswith('yaml'):
                     self.environments.insert(0, YAML_HotClasses.YAML_Env(None, abs_path))
 
+        # Additional parameters (-P)
+        if arguments['parameters']:
+            for par in list(arguments['parameters']):
+
+                # Split to key value pairs
+                par_list = par.split(';')
+
+                # Assign KV to self.parameters
+                for p in par_list:
+                    kv = p.split('=')
+                    self.parameters[kv[0]] = kv[1]
 
     def load_environments(self):
         ''' Goes through all environment files, saves information about them. '''
@@ -110,7 +122,7 @@ class YAML_HotValidator:
                 for par in list(env_node.structure['parameter_defaults'].keys()):
                     env_node.params_default[par] = False
 
-            # Create HOT files with mapped files - TODO regexp mapping
+            # Create HOT files with mapped files
             for child in list(env_node.resource_registry.values()):
                 if ((type(child) == str and child.endswith('.yaml')) or
                     ((type(child) == list) and child[0].endswith('.yaml'))):
@@ -149,6 +161,44 @@ class YAML_HotValidator:
                                 break
                         if flag:
                             break
+
+    def add_parameters(self):
+        ''' Add additional parameters from prompt to root template file
+            Add parameter values from environments to root template file
+        '''
+
+        # Add parameters and values from prompt
+        if self.parameters:
+            for key, value in six.iteritems(self.parameters):
+
+                # If parameter exists, only insert value
+                flag = False
+                for p in self.templates[-1].params:
+                    if p.name == key:
+                        p.value = value
+                        flag = True
+                        break
+
+                # If not, create one (TODO or error?)
+                if not flag:
+                    self.templates[-1].params.insert(0, YAML_HotClasses.YAML_Prop_Par((key, value), True))
+
+        # Assign values to parameters from environments
+        for env in self.environments:
+            if env.params:
+
+                # Go through all parameters declare in environments
+                for key, value in six.iteritems(env.params):
+                    flag = False
+                    for p in self.templates[-1].params:
+                        if p.name == key:
+                            p.value = value
+                            flag = True
+                            break
+
+                    # If parameter does not exist in the root template
+                    if not flag:
+                        self.templates[-1].invalid.insert(0, YAML_Reference(key, env.path, ENUM.YAML_Types.GET_PARAM, None))
 
     def apply_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
@@ -390,6 +440,7 @@ class YAML_HotValidator:
 
         # Add param_defaults from environments where default is missing
         self.add_param_defaults()
+        self.add_parameters()
 
         if self.print_nyan:
             progress.task_done()

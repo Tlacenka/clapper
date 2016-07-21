@@ -23,10 +23,12 @@ def main():
                         help='When true, provides colourful output')
     parser.add_argument('-t', '--print-tree', action='store_true',
                         help='When true, output contains template structure')
-    parser.add_argument('-e', '--environment', metavar='path/to/environment', nargs='+',
+    parser.add_argument('-e', '--environment-file', metavar='path/to/environment', nargs='+',
                         help='Environment files to be used.')
-    parser.add_argument('-f', '--file', metavar='path/to/file',
+    parser.add_argument('-f', '--template-file', metavar='path/to/file',
                         help='HOT file to be used.')
+    parser.add_argument('-P', '--parameters', metavar='<KEY1=VALUE1;KEY2=VALUE2...>', nargs='+',
+                        help='Parameter values used in the templates.')
     parser.add_argument('-n', '--nyan', action='store_true',
                         help='When true, prints nyanbar.')
 

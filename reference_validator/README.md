@@ -19,9 +19,10 @@ It is currently under development but it should be already able to validate most
     $ python[3] reference_validator.py -f <path/to/yaml/root template> -e <path/to/yaml/environment file> [<another/path/to/env/files>] [-p/--pretty-format] [-u/--print-unused] [-n/--nyan] [-h/--help] [-t/--print-tree]
 
 <h3> Parameters </h3>
- - ``-f`` is an absolute/relative path to root HOT template
- - ``-e`` is an absolute/relative path to environment file(s)
+ - ``-f/--template-file`` is an absolute/relative path to root HOT template
+ - ``-e/--environment-file`` is an absolute/relative path to environment file(s)
  - ``-p/--pretty-format`` when selected, the output is colourful
+ - ``-P/--parameters`` enables inserting additional parameters for template file
  - ``-u/--print-unused`` causes printing additional info (unused instances without reference)
  - ``-n/--nyan`` causes printing nyanbar
  - ``-t/--print-tree`` when selected, output also contains tree template structure
