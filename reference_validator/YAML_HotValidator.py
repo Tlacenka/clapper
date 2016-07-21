@@ -131,35 +131,115 @@ class YAML_HotValidator:
             self.curr_nodes.remove(env_node)
 
 
-    def add_mappings(self):
-        ''' Add all files mapped to resources as children in parent node. '''
-        # TODO regexp mappings
-
+    def add_param_defaults(self):
+        ''' Add default from param_defaults where missing '''
         for hot in self.templates + self.mappings:
-            for res in hot.resources:
+            for p in hot.params:
 
-                # If a mapped file exists
-                flag = False
-                for env in self.environments:
-                    for origin, mapped in six.iteritems(env.resource_registry):
-
-                        # Finds mapped file if the mapping is designated for the resource
-                        if ((res.type == origin) and
-                            ((type(mapped) == str) or (mapped[1] == res.name))):
-
-                            # Assign it to resource
-                            for m in self.mappings:
-                                if (((type(mapped) == str) and (m.path == mapped)) or
-                                    ((type(mapped) == list) and (m.path == mapped[0]))
-                                    and (m.parent == env)):
-                                    res.child = m
-                                    m.parent = res.hotfile
-                                    flag = True
-                                    break
+                # Try to find param_default
+                if p.default is None:
+                    flag = False
+                    for env in self.environments:
+                        for key, value in six.iteritems(env.params_default):
+                            
+                            # Add default
+                            if p.name == key:
+                                p.default = value
+                                flag = True
+                                break
                         if flag:
                             break
-                    if flag:
-                        break
+
+    def apply_mappings(self):
+        ''' Add all files mapped to resources as children in parent node. '''
+
+        # Try to find resources for every mapping in the resource registry
+        for env in self.environments:
+            for origin, mapped in six.iteritems(env.resource_registry):
+                self.map_resources(origin, mapped, env)
+
+    def find_mapping(self, mapping):
+        ''' Searches if there is a mapping with passed side available.
+            mapping - left side of mapping
+            returns first found right side of the mapping if found or None
+        '''
+
+        for env in self.environments:
+            for origin, mapped in six.iteritems(env.resource_registry):
+                if origin == mapping:
+                    return (mapped, env)
+        return None
+
+    def map_resources(self, origin, mapped, env):
+        ''' Finds applicable resources, changes their type.
+            origin - original type
+            mapped - mapped type
+            env - environment file
+        '''
+
+        # Wildcard
+        if '*' in origin:
+
+            # Find all resources corresponding to the wildcard
+            for hot in self.templates + self.mappings:
+                for r in hot.resources:
+
+                    # Change their type
+                    if (origin.startswith('*') and r.type.endswith(origin[1:])):
+                        r.type = r.type.replace(origin[1:], mapped[1:])
+
+                        # Find out if newly mapped resources have other applicable mappings
+                        ret = self.find_mapping(r.type)
+                        if ret is not None:
+                            # If yes, apply mappings (might be that this mapping
+                            # has already been realized in apply_mappings)
+                            self.map_resources(r.type, ret[0], ret[1]) 
+                        
+                    elif (origin.endswith('*') and r.type.startswith(origin[:-1])):
+                        r.type = r.type.replace(origin[:-1], mapped[:-1])
+
+                        # Find out if newly mapped resources have other applicable mappings
+                        ret = self.find_mapping(r.type)
+                        if ret is not None:
+                            # If yes, apply mappings (might be that this mapping
+                            # has already been realized in apply_mappings)
+                            self.map_resources(r.type, ret[0], ret[1]) 
+
+        # Direct mapping
+        else:
+
+            flag = False
+            # Find all corresponding resources
+            for hot in self.templates + self.mappings:
+                for r in hot.resources:
+
+                    # Finds mapped file if the mapping is designated for the resource
+                    if ((r.type == origin) and
+                        ((type(mapped) == str) or (mapped[1] == r.name))):
+
+                        # Find mapped YAML file/other type, assign it to the resource
+                        for m in self.mappings:
+
+                            # Other nonYAML type
+                            if not mapped.endswith('.yaml'):
+                                r.type = mapped
+                                flag = True
+
+                            # YAML mapping
+                            elif (((type(mapped) == str) and (m.path == mapped)) or
+                                ((type(mapped) == list) and (m.path == mapped[0]))
+                                and (m.parent == env)):
+                                r.type = mapped
+                                r.child = m
+                                m.parent = r.hotfile
+                                flag = True
+
+            if flag:
+                ret = self.find_mapping(mapped)
+                if ret is not None:
+                    # If yes, apply mappings (might be that this mapping
+                    # has already been realized in apply_mappings)
+                    self.map_resources(mapped, ret[0], ret[1]) 
 
 
     def validate_env_params(self):
@@ -168,8 +248,9 @@ class YAML_HotValidator:
         # Check parameters section
         for env in self.environments:
             for par in list(env.params.keys()):
-                if par in list(self.templates[-1].params.keys()):
+                if par in [p.name for p in self.templates[-1].params]:
                     env.params[par] = True
+                    break
 
         # Check parameter_defaults section
         for env in self.environments:
@@ -307,13 +388,16 @@ class YAML_HotValidator:
                                              os.path.join(self.init_dir,
                                              os.path.dirname(self.templates[0].path)))
 
+        # Add param_defaults from environments where default is missing
+        self.add_param_defaults()
+
         if self.print_nyan:
             progress.task_done()
             time.sleep(self.sleep_time)
 
         # Also add mapped files as children once there is a full structure of files
         # (if done earlier, some mapped types used in mapped files could be skipped)
-        self.add_mappings()
+        self.apply_mappings()
 
         # Check environment parameters against fully loaded HOT structure
         self.validate_env_params()
