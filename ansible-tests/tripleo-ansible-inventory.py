@@ -50,6 +50,11 @@ try:
 except ImportError:
     print('keystoneclient is required', file=sys.stderr)
     sys.exit(1)
+try:
+    from novaclient import client as nova_client
+except ImportError:
+    print('novaclient is required', file=sys.stderr)
+    sys.exit(1)
 
 
 def _parse_config():
@@ -87,9 +92,12 @@ class TripleoInventory(object):
         self.configs = configs
         self._ksclient = None
         self._hclient = None
+        self._nclient = None
+        self.stack_name = self.get_stack_name()
 
     def fetch_stack_resources(self, stack, resource_name):
         heatclient = self.hclient
+        novaclient = self.nclient
         ret = []
         try:
             resource_id = heatclient.resources.get(stack, resource_name) \
@@ -97,12 +105,23 @@ class TripleoInventory(object):
             for resource in heatclient.resources.list(resource_id):
                 node = heatclient.resources.get(resource_id,
                                                 resource.resource_name)
-                node_address = node.attributes['tenant_ip_address']
-                ret.append(node_address)
+                node_resource = node.attributes['nova_server_resource']
+                nova_server = novaclient.servers.get(node_resource)
+                if nova_server.status == 'ACTIVE':
+                    ret.append(nova_server.networks['ctlplane'][0])
         except Exception:
             # Ignore non existent stacks or resources
             pass
         return ret
+
+    def get_overcloud_output(self, output_name):
+        try:
+            stack = self.hclient.stacks.get(self.stack_name)
+            for output in stack.outputs:
+                if output['output_key'] == output_name:
+                    return output['output_value']
+        except Exception:
+            return None
 
     def list(self):
         ret = {
@@ -113,17 +132,23 @@ class TripleoInventory(object):
                 },
             }
         }
-        controller_group = self.fetch_stack_resources('overcloud',
+
+        public_vip = self.get_overcloud_output('PublicVip')
+        if public_vip:
+            ret['undercloud']['vars']['public_vip'] = public_vip
+
+        controller_group = self.fetch_stack_resources(self.stack_name,
                                                       'Controller')
         if controller_group:
             ret['controller'] = controller_group
 
-        compute_group = self.fetch_stack_resources('overcloud', 'Compute')
+        compute_group = self.fetch_stack_resources(self.stack_name,
+                                                   'Compute')
         if compute_group:
             ret['compute'] = compute_group
 
         if any([controller_group, compute_group]):
-            ret['overcloud'] = {
+            ret[self.stack_name] = {
                 'children': list(set(ret.keys()) - set(['undercloud'])),
                 'vars': {
                     'ansible_ssh_user': 'heat-admin',
@@ -168,6 +193,33 @@ class TripleoInventory(object):
                       file=sys.stderr)
                 sys.exit(1)
         return self._hclient
+
+    @property
+    def nclient(self):
+        if self._nclient is None:
+            ksclient = self.ksclient
+            endpoint = ksclient.service_catalog.url_for(
+                service_type='compute', endpoint_type='publicURL')
+            try:
+                self._nclient = nova_client.Client(
+                    '2',
+                    bypass_url=endpoint,
+                    auth_token=ksclient.auth_token)
+            except Exception as e:
+                print("Error connecting to Nova: {}".format(e.message),
+                      file=sys.stderr)
+                sys.exit(1)
+        return self._nclient
+
+    def get_stack_name(self):
+        try:
+            for stack in self.hclient.stacks.list():
+                if 'CREATE' in stack.stack_status:
+                    return stack.stack_name
+        except Exception as e:
+            print("Unable to retreive overcloud stack ".format(e.message),
+                  file=sys.stderr)
+            sys.exit(1)
 
 
 def main():

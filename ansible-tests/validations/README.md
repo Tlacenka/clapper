@@ -15,10 +15,14 @@ the deployment stage they're should be run on.
 The validations run on the undercloud.)
 
 * [Make sure the undercloud drives have 512e support](512e.yaml)
+* [Validate the Heat network environment files](network_environment.yaml)
 * [Verify the undercloud has enough disk space for the initial deployment](undercloud-disk-space.yaml)
 * [Verify the undercloud has enough RAM](undercloud-ram.yaml)
 * [Verify the undercloud has enough CPU cores](undercloud-cpu.yaml)
+* [Verify the undercloud doesn't run too many processes](undercloud-process-count.yaml)
 * [Verify `network_gateway` is set correctly in `undercloud.conf` and is reachable](check-network-gateway.yaml)
+* [Validate the instackenv.json file contents](instackenv.yaml)
+* [Check the number of IP addresses for the overcloud nodes](ctlplane-ip-range.yaml)
 
 ## Pre Deployment ##
 
@@ -35,3 +39,6 @@ The validations run on the undercloud.)
 * [Verify Nova's firewall_driver is set to NoopFirewallDriver](no-op-firewall-nova-driver.yaml)
 * [Run neutron-sanity-check](neutron-sanity-check.yaml)
 * [Verify MySQL Open Files limit](mysql-open-files-limit.yaml)
+* [Check Horizon and Keystone connectivity](check-openstack-endpoints.yaml)
+* [Verify all hosts have NTP configured and running](ntpstat.yaml)
+* [Verify the pacemaker status on the controller nodes](pacemaker-status.yaml)
