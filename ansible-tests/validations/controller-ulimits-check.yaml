@@ -1,0 +1,34 @@
+---
+- hosts: controller
+  vars:
+    metadata:
+      name: Check controller ulimits
+      description: >
+        This will check the ulimits of each controller.
+      groups:
+      - post-deployment
+    nofiles_min: 2048
+    nproc_min: 2048
+  tasks:
+  - name: Get nofiles limit
+    become: true
+    command: sh -c "ulimit -n"
+    register: nofilesval
+    changed_when: False
+  - name: Check nofiles limit
+    fail:
+      msg: >
+        nofiles is set to {{ nofilesval.stdout }}.  It should be at least 2048 or higher, depending on available resources.
+    failed_when: "{{ nofilesval.stdout|int }} < {{ nofiles_min }}"
+    #ignore_errors: True
+
+  - name: Get nproc limit
+    become: true
+    command: sh -c "ulimit -u"
+    register: nprocval
+    changed_when: False
+  - name: Check nproc limit
+    fail:
+      msg: >
+        nproc is set to {{ nprocval.stdout }}.  It should be at least 2048 or higher, depending on available resources.
+    failed_when: "{{ nprocval.stdout|int }} < {{ nproc_min }}"
