@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# File: YAML_HotClasses.py
+# File: hotclasses.py
 # Brief: Additional classes used for HOT reference validation
-# Classes: YAML_Env, YAML_Prop_Par, YAML_Reference, YAML_Resource
+# Classes: Environment, Prop_Par, Reference, Resource
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
 from __future__ import with_statement, print_function
 
-import YAML_Enums as ENUM
-import YAML_Hotfile as HOT
+import enum
 
-class YAML_Env:
+class Environment:
     ''' Class with attributes needed for work with environment files. '''
 
     def __init__(self, parent_node, abs_path):
@@ -31,7 +30,7 @@ class YAML_Env:
 
         self.ok = True              # validation status
 
-class YAML_Prop_Par:
+class Prop_Par:
     ''' Class for saving information about parameters and properties.
         Each parameter and its corresponding property share one. '''
 
@@ -68,7 +67,7 @@ class YAML_Prop_Par:
         if obj.type is not None:
             self.type = obj.type
 
-class YAML_Resource:
+class Resource:
     ''' Stores useful info about resource, its structure. '''
     def __init__(self, name, value, hot):
         self.name = name                    # name of resource variable
@@ -79,12 +78,12 @@ class YAML_Resource:
         self.hotfile = hot                  # file containing resource
         self.child = None                   # child node
 
-        self.properties = []                # list of YAML_ParProp
+        self.properties = []                # list of ParProp
 
         self.isGroup = False # is it a group type
         self.grouptype = ''
 
-        if self.type in [ENUM.YAML_Grouptypes.ASG, ENUM.YAML_Grouptypes.RG]:
+        if self.type in [enum.Grouptypes.ASG, enum.Grouptypes.RG]:
             self.isGroup = True
 
         props = []
@@ -96,25 +95,25 @@ class YAML_Resource:
             # Type and properties of the individual resource
             if self.isGroup:
                 self.grouptype = self.type
-                if self.grouptype == ENUM.YAML_Grouptypes.ASG:
+                if self.grouptype == enum.Grouptypes.ASG:
                     self.type = self.structure['properties']['resource']['type']
                 else:
                     self.type = self.structure['properties']['resource_def']['type']
 
                 # Load properties
                 for prop in self.structure['properties'][('resource' if
-                            self.grouptype == ENUM.YAML_Grouptypes.ASG else 'resource_def')]['properties'].items():
-                    self.properties.append(YAML_Prop_Par(prop, False))
+                            self.grouptype == enum.Grouptypes.ASG else 'resource_def')]['properties'].items():
+                    self.properties.append(Prop_Par(prop, False))
             else:
                 for prop in self.structure['properties'].items():
-                    self.properties.append(YAML_Prop_Par(prop, False))
+                    self.properties.append(Prop_Par(prop, False))
 
 
-class YAML_Reference:
-    ''' Saves all invalid references for output. In YAML_Hotfile. '''
+class Reference:
+    ''' Saves all invalid references for output. In HotFile. '''
 
     def __init__(self, referent, element, ref_type, parent):
         self.referent = referent # name of referred element
         self.element = element   # in which resource was reference realized
-        self.type = ref_type     # type of referred attribute (YAML_Types)
+        self.type = ref_type     # type of referred attribute (Types)
         self.parent = parent     # used in property reference

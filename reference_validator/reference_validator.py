@@ -11,7 +11,7 @@ from __future__ import with_statement, print_function
 import argparse
 import sys
 
-import YAML_HotValidator as VALIDATOR
+import hotvalidator
 
 def main():
 
@@ -20,10 +20,10 @@ def main():
     parser.add_argument('-u', '--print-unused', action='store_true',
                         help='When true, prints all unused resources/parameters.')
     parser.add_argument('-p', '--pretty-format', action='store_true',
-                        help='When true, provides colourful output')
+                        help='When true, provides colorful output')
     parser.add_argument('-t', '--print-tree', action='store_true',
                         help='When true, output contains template structure')
-    parser.add_argument('-e', '--environment-file', metavar='path/to/environment', nargs='+',
+    parser.add_argument('-e', '--environment-file', metavar='path/to/environment', action='append',
                         help='Environment files to be used.')
     parser.add_argument('-f', '--template-file', metavar='path/to/file',
                         help='HOT file to be used.')
@@ -33,7 +33,7 @@ def main():
                         help='When true, prints nyanbar.')
 
     # Initialize validator
-    validator = VALIDATOR.YAML_HotValidator(vars(parser.parse_args()))
+    validator = hotvalidator.HotValidator(vars(parser.parse_args()))
 
     # Run validator
     validator.run()

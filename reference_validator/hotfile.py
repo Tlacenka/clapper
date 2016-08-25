@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# File: YAML_Hotfile.py
-# Brief: Class YAML_Hotfile for validating HOT files
+# File: hotfile.py
+# Brief: Class HotFile for validating HOT files
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
@@ -13,10 +13,10 @@ import sys
 import six  # compatibility
 import yaml # pip install pyyaml
 
-import YAML_Enums as ENUM
-import YAML_HotClasses
+import enum
+import hotclasses
 
-class YAML_Hotfile:
+class HotFile:
     ''' Class with attributes needed for work with HOT files. '''
 
     def __init__(self, parent_node, abs_path):
@@ -26,8 +26,8 @@ class YAML_Hotfile:
 
         self.parent = parent_node   # Parent node or nothing in the case of root node
 
-        self.resources = []         # YAML_Resource list
-        self.params = []            # list of YAML_Prop_Par
+        self.resources = []         # Resource list
+        self.params = []            # list of Prop_Par
                                     # TODO exception for root template when checking properties values
 
         self.outputs = {}           # {name : <value structure>}
@@ -35,7 +35,7 @@ class YAML_Hotfile:
         self.structure = {}         # structure of YAML file
         self.ok = True
 
-        self.invalid = []           # list of invalid references (YAML_Reference)
+        self.invalid = []           # list of invalid references (Reference)
 
 
     def load_file(self, curr_nodes, templates, environments, curr_path):
@@ -55,12 +55,12 @@ class YAML_Hotfile:
         # Save all parameters names, resources and properties
         if 'parameters' in self.structure:
             for param in self.structure['parameters'].items():
-                self.params.append(YAML_HotClasses.YAML_Prop_Par(param, True))
+                self.params.append(hotclasses.Prop_Par(param, True))
 
         # Save name and structure of each resource
         if 'resources' in self.structure:
             for key, value in six.iteritems(self.structure['resources']):
-                self.resources.append(YAML_HotClasses.YAML_Resource(key, value, self))
+                self.resources.append(hotclasses.Resource(key, value, self))
 
         # Save outputs
         if 'outputs' in self.structure:
@@ -70,7 +70,7 @@ class YAML_Hotfile:
         # Examine children nodes to get the full information about references
         for resource in self.resources:
             if resource.type.endswith('.yaml'):
-                templates.insert(0, YAML_Hotfile(self, resource.type))
+                templates.insert(0, HotFile(self, resource.type))
 
                 # Add child
                 resource.child = templates[0]
@@ -170,7 +170,7 @@ class YAML_Hotfile:
                              (len(get_value.items()) == 1) and
                              ('get_' in list(get_value.keys())[0])):
 
-                             if isinstance(self.parent, YAML_Hotfile):
+                             if isinstance(self.parent, HotFile):
                                  get_value = self.parent.classify_items(
                                      list(get_value.keys())[0],
                                      list(get_value.values())[0], name)
@@ -216,7 +216,7 @@ class YAML_Hotfile:
                    elif type(value[i]) == dict: # nested get_
                        kv = value[i].items()[0]
 
-                       if type(self.parent) == YAML_Hotfile:
+                       if type(self.parent) == HotFile:
                           get_value = self.parent.classify_items(kv[0], kv[1], name)
                           if get_value is None:
                              error = value[i]
@@ -225,8 +225,8 @@ class YAML_Hotfile:
 
             if error is not None:
                 # Add it to invalid references
-                self.invalid.append(YAML_HotClasses.YAML_Reference(value[1], name,
-                                    ENUM.YAML_Types.GET_PARAM, None))
+                self.invalid.append(hotclasses.Reference(value[1], name,
+                                    enum.Types.GET_PARAM, None))
                 self.ok = False
                 return None
 
@@ -244,8 +244,8 @@ class YAML_Hotfile:
             if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
                 if value not in [x.name for x in self.params]:
                     # Add it to invalid references
-                    self.invalid.append(YAML_HotClasses.YAML_Reference(value, name,
-                                         ENUM.YAML_Types.GET_PARAM, None))
+                    self.invalid.append(hotclasses.Reference(value, name,
+                                         enum.Types.GET_PARAM, None))
                     self.ok = False
                     return None
 
@@ -258,8 +258,8 @@ class YAML_Hotfile:
                     return (par.value if par.value is not None else par.default)
         else:
              # Add it to invalid references
-             self.invalid.append(YAML_HotClasses.YAML_Reference(value, name,
-                                 ENUM.YAML_Types.GET_PARAM, None))
+             self.invalid.append(hotclasses.Reference(value, name,
+                                 enum.Types.GET_PARAM, None))
              self.ok = False
              return None
 
@@ -276,8 +276,8 @@ class YAML_Hotfile:
                 return r
 
         # If not found, add it to invalid references
-        self.invalid.append(YAML_HotClasses.YAML_Reference(value, name,
-                            ENUM.YAML_Types.GET_RESOURCE, None))
+        self.invalid.append(hotclasses.Reference(value, name,
+                            enum.Types.GET_RESOURCE, None))
         self.ok = False
         return None
 
@@ -342,8 +342,8 @@ class YAML_Hotfile:
                         return get_value
 
                  # TODO longer hierarchy
-                 # "attributes" vrati u ResourceGroup { "server0" -> {"name": ..., "ip": ...}, "server1" -> {"name": ..., "ip": ...} }
-                 # - slovnik kde klice jsou jmena resources v te resource group a hodnoty jsou atributy tech resourcu
+                 # "attributes" returns in ResourceGroup { "server0" -> {"name": ..., "ip": ...}, "server1" -> {"name": ..., "ip": ...} }
+                 # - dictionary where keys are names of resources in that group, values are resource attributes
                 elif ((get_value.grouptype == 'OS::Heat::ResourceGroup') and
                       (len(value) >= 3) and (value[1] == 'attributes')):
                     for k, v in six.iteritems(get_value.child.outputs):
@@ -505,9 +505,9 @@ class YAML_Hotfile:
             cur_resource.used = True
             return get_value
         else:
-            self.invalid.append(YAML_HotClasses.YAML_Reference(error,
+            self.invalid.append(hotclasses.Reference(error,
                                 name + ' - output of ' + value[0],
-                                ENUM.YAML_Types.GET_ATTR, None))
+                                enum.Types.GET_ATTR, None))
             self.ok = False
             return None
 
@@ -530,9 +530,9 @@ class YAML_Hotfile:
                     flag = True
 
                     if (p.default is None):
-                        self.invalid.append(YAML_HotClasses.YAML_Reference(
+                        self.invalid.append(hotclasses.Reference(
                                             diff, resource.name,
-                                            ENUM.YAML_Types.MISS_PROP, parent.path))
+                                            enum.Types.MISS_PROP, parent.path))
                         self.ok = False
                         break
             
@@ -541,13 +541,13 @@ class YAML_Hotfile:
             if not flag:
                 for p in resource.properties:
                     if diff == p.name:
-                        self.invalid.append(YAML_HotClasses.YAML_Reference(
+                        self.invalid.append(hotclasses.Reference(
                                         diff, resource.name,
-                                        ENUM.YAML_Types.MISS_PARAM, self.path))
+                                        enum.Types.MISS_PARAM, self.path))
                         self.ok = False
                         break
 
-        # Share YAML_Prop_Par for each match
+        # Share Prop_Par for each match
         for par in range(len(self.params)):
             for prop in resource.properties:
                 if self.params[par].name == prop.name:
@@ -576,6 +576,6 @@ class YAML_Hotfile:
                    if not flag:
 
                        # Searched resource does not exist
-                       self.invalid.append(YAML_HotClasses.YAML_Reference(d, r.name,
-                                           ENUM.YAML_Types.DEPENDS_ON, None))
+                       self.invalid.append(hotclasses.Reference(d, r.name,
+                                           enum.Types.DEPENDS_ON, None))
                        self.ok = False

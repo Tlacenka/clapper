@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# File: YAML_Enums.py
+# File: enum.py
 # Brief: Additional classes defining enumeration types for HOT reference validator
-# Classes: YAML_colours, YAML_tree_info, YAML_Types
+# Classes: Colors, TreeInfo, Types, Grouptypes
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
-class YAML_colours:
+class Colors:
     ''' Code for colouring output '''
     BLUE      = '\033[94m'
     GREEN     = '\033[92m'
@@ -19,13 +19,13 @@ class YAML_colours:
     DEFAULT   = '\033[0m'
 
 
-class YAML_tree_info:
+class TreeInfo:
     ''' Indicators of printed tree nodes '''
     OTHER = 0
     LAST = 1 # Last sibling
     ONLY = 2 # Only one child
 
-class YAML_Types:
+class Types:
     ''' Enumerated reference get_ functions + properties:parameters reference. '''
 
     GET_RESOURCE  = 1 # get_resource
@@ -35,7 +35,7 @@ class YAML_Types:
     MISS_PARAM = 5    # property in file A does not have corresponding parameter in file B
     DEPENDS_ON = 6    # resource that other resource depends on does not exist
 
-class YAML_Grouptypes:
+class Grouptypes:
     ''' Resource types for groups of resources '''
     ASG = 'OS::Heat::AutoScalingGroup'
     RG = 'OS::Heat::ResourceGroup'

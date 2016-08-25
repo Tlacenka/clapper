@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 #coding=utf-8
 
-# File: YAML_HotValidator.py
-# Brief: Contains class YAML_HotValidator for validating references
+# File: hotvalidator.py
+# Brief: Contains class HotValidator for validating references
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
@@ -12,17 +12,20 @@ import os
 import pprint
 import sys
 import six  # compatibility
+import time
 import yaml # pip install pyyaml
 
-import YAML_Enums as ENUM
-import YAML_Hotfile as HOT
-import YAML_HotClasses
+import enum
+import hotfile
+import hotclasses
 
-# only for Python 2.x
-if sys.version_info[0] == 2:
+# import nyanbar if available
+try:
     import nyanbar
+except ImportError:
+    nyanbar = None
 
-class YAML_HotValidator:
+class HotValidator:
     ''' Detects unused variables, invalid references.'''
 
     def __init__(self, arguments):
@@ -49,14 +52,14 @@ class YAML_HotValidator:
         self.print_unused = arguments['print_unused']
         self.pretty_format = arguments['pretty_format']
         self.print_structure = arguments['print_tree']
-        self.print_nyan = (sys.version_info[0] == 2) and arguments['nyan']
+        self.print_nyan = nyanbar and arguments['nyan']
         self.sleep_time = 0.3
         self.printer = pprint.PrettyPrinter(indent=2)
 
         # Check HOT file (-f)
         abs_path = os.path.abspath(arguments['template_file'])
         if abs_path.endswith('yaml'):
-            self.templates.insert(0, HOT.YAML_Hotfile(None, abs_path))
+            self.templates.insert(0, hotfile.HotFile(None, abs_path))
         else:
             print('Wrong template file suffix (YAML expected).')
             sys.exit(1)
@@ -66,7 +69,7 @@ class YAML_HotValidator:
             for env in list(arguments['environment_file']):
                 abs_path = os.path.abspath(env)
                 if abs_path.endswith('yaml'):
-                    self.environments.insert(0, YAML_HotClasses.YAML_Env(None, abs_path))
+                    self.environments.insert(0, hotclasses.Environment(None, abs_path))
 
         # Additional parameters (-P)
         if arguments['parameters']:
@@ -136,7 +139,7 @@ class YAML_HotValidator:
                             break
 
                     if not found:
-                        env_node.children.insert(0, HOT.YAML_Hotfile(env_node, child))
+                        env_node.children.insert(0, hotfile.HotFile(env_node, child))
                         self.mappings.append(env_node.children[0])
 
             # Remove from currently validated files
@@ -181,7 +184,7 @@ class YAML_HotValidator:
 
                 # If not, create one (TODO or error?)
                 if not flag:
-                    self.templates[-1].params.insert(0, YAML_HotClasses.YAML_Prop_Par((key, value), True))
+                    self.templates[-1].params.insert(0, hotclasses.Prop_Par((key, value), True))
 
         # Assign values to parameters from environments
         for env in self.environments:
@@ -198,7 +201,7 @@ class YAML_HotValidator:
 
                     # If parameter does not exist in the root template
                     if not flag:
-                        self.templates[-1].invalid.insert(0, YAML_Reference(key, env.path, ENUM.YAML_Types.GET_PARAM, None))
+                        self.templates[-1].invalid.insert(0, Reference(key, env.path, enum.Types.GET_PARAM, None))
 
     def apply_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
@@ -352,23 +355,23 @@ class YAML_HotValidator:
         ''' Prints tree structure of templates '''
 
         # Print higher branches
-        if (len(branch_list) and (root_position != ENUM.YAML_tree_info.ONLY)):
+        if (len(branch_list) and (root_position != enum.TreeInfo.ONLY)):
             cur_indent = 0
             print('')
             for i in branch_list:
                 print ((i-cur_indent-1) * '   ' + '│   ', end="")
                 cur_indent = i
             print ((indent-cur_indent-1) * '   ', end="")
-        elif root_position != ENUM.YAML_tree_info.ONLY:
+        elif root_position != enum.TreeInfo.ONLY:
             print ('\n' + (indent-1) * '   ', end="")
 
         # Print child node
         if indent > 0:
-            if root_position == ENUM.YAML_tree_info.ONLY:
+            if root_position == enum.TreeInfo.ONLY:
                 print (' ── ' + root.path, end="")
-            elif root_position == ENUM.YAML_tree_info.OTHER:
+            elif root_position == enum.TreeInfo.OTHER:
                 print ('├─ ' + root.path, end="")
-            elif root_position == ENUM.YAML_tree_info.LAST:
+            elif root_position == enum.TreeInfo.LAST:
                 print ('└─ ' + root.path, end="")
         else:
             print(root.path, end="")
@@ -386,20 +389,20 @@ class YAML_HotValidator:
 
         # Determine child position
         if ((lastindex is not None) and (lastindex == firstindex)):
-            child_position = ENUM.YAML_tree_info.ONLY
+            child_position = enum.TreeInfo.ONLY
         else:
-            child_position = ENUM.YAML_tree_info.OTHER
+            child_position = enum.TreeInfo.OTHER
 
         # Add branch to indicate another |
-        if root_position != ENUM.YAML_tree_info.ONLY:
+        if root_position != enum.TreeInfo.ONLY:
             branch_list = branch_list + [indent-1]
 
         # Print subtrees of children
         for r in root.resources:
             if r.child is not None:
-                if ((child_position != ENUM.YAML_tree_info.ONLY) and
+                if ((child_position != enum.TreeInfo.ONLY) and
                     (root.resources.index(r) == lastindex)):
-                    child_position = ENUM.YAML_tree_info.LAST
+                    child_position = enum.TreeInfo.LAST
 
                 self.print_tree(r.child, child_position, indent, branch_list)
 
@@ -483,15 +486,15 @@ class YAML_HotValidator:
         # Environments
         if self.environments:
             if self.pretty_format:
-                print(ENUM.YAML_colours.ORANGE + ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE +
-                      'Environments:' + ENUM.YAML_colours.DEFAULT)
+                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
+                      'Environments:' + enum.Colors.DEFAULT)
             else:
                 print('Environments:')
 
             # Print total
             if self.pretty_format:
-                print(ENUM.YAML_colours.BOLD + 'Total: ' + str(len(self.environments)) +
-                      ENUM.YAML_colours.DEFAULT)
+                print(enum.Colors.BOLD + 'Total: ' + str(len(self.environments)) +
+                      enum.Colors.DEFAULT)
             else:
                 print ('Total: ' + str(len(self.environments)))
             print('')
@@ -500,10 +503,10 @@ class YAML_HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE +
-                          'File ' + ENUM.YAML_colours.BLUE +
+                    print(enum.Colors.BOLD + enum.Colors.UNDERLINE +
+                          'File ' + enum.Colors.BLUE +
                           os.path.relpath(env.path, self.init_dir) +
-                          ENUM.YAML_colours.DEFAULT)
+                          enum.Colors.DEFAULT)
                 else:
                     print('File ' + os.path.relpath(env.path, self.init_dir))
                 print('')
@@ -512,14 +515,14 @@ class YAML_HotValidator:
                 if False in list(env.params.values()):
                     env.ok = False
                     if self.pretty_format:
-                         print (ENUM.YAML_colours.BOLD + 'Parameters without match in root template:' +
-                                ENUM.YAML_colours.DEFAULT)
+                         print (enum.Colors.BOLD + 'Parameters without match in root template:' +
+                                enum.Colors.DEFAULT)
                     else:
                          print ('Parameters without match in root template:')
                     for par in [x for x in list(env.params.keys())
                                 if env.params[x] == False]:
                         if self.pretty_format:
-                            print ('- ' + ENUM.YAML_colours.YELLOW + par + ENUM.YAML_colours.DEFAULT)
+                            print ('- ' + enum.Colors.YELLOW + par + enum.Colors.DEFAULT)
                         else:
                             print ('- ' + par)
                     print('')
@@ -527,16 +530,16 @@ class YAML_HotValidator:
                 # Parameter_defaults section (optional)
                 if self.print_unused and (False in list(env.params_default.values())):
                     if self.pretty_format:
-                        print (ENUM.YAML_colours.BOLD + 'Parameter defaults without match:' +
-                               ENUM.YAML_colours.DEFAULT)
+                        print (enum.Colors.BOLD + 'Parameter defaults without match:' +
+                               enum.Colors.DEFAULT)
                     else:
                         print ('Parameter defaults without match:')
 
                     for par in [x for x in list(env.params_default.keys())
                                 if env.params_default[x] == False]:
                         if self.pretty_format:
-                            print ('- ' + ENUM.YAML_colours.YELLOW + par +
-                                    ENUM.YAML_colours.DEFAULT)
+                            print ('- ' + enum.Colors.YELLOW + par +
+                                    enum.Colors.DEFAULT)
                         else:
                             print ('- ' + par)
                     print('')
@@ -544,14 +547,14 @@ class YAML_HotValidator:
                 # Print file status as OK if there were no problems
                 if env.ok:
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD + 'Status: ' + ENUM.YAML_colours.GREEN +
-                              'OK' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.GREEN +
+                              'OK' + enum.Colors.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD + 'Status: ' + ENUM.YAML_colours.RED +
-                              'FAILED' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.RED +
+                              'FAILED' + enum.Colors.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -562,16 +565,16 @@ class YAML_HotValidator:
         rev_templates = list(reversed(self.templates))
         for hot in [x for x in [rev_templates, list(reversed(self.mappings))] if len(x)]:
             if self.pretty_format:
-                print(ENUM.YAML_colours.ORANGE + ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE +
+                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
                       ('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:') +
-                      ENUM.YAML_colours.DEFAULT)
+                      enum.Colors.DEFAULT)
             else:
                 print(('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:'))
 
             # Print total
             if self.pretty_format:
-                print(ENUM.YAML_colours.BOLD + 'Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)) +
-                      ENUM.YAML_colours.DEFAULT)
+                print(enum.Colors.BOLD + 'Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)) +
+                      enum.Colors.DEFAULT)
             else:
                 print ('Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)))
             print('')
@@ -580,14 +583,14 @@ class YAML_HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE + 'File ' +
-                          ENUM.YAML_colours.BLUE + node.path + ENUM.YAML_colours.DEFAULT)
+                    print(enum.Colors.BOLD + enum.Colors.UNDERLINE + 'File ' +
+                          enum.Colors.BLUE + node.path + enum.Colors.DEFAULT)
                 else:
                     print('File ' + node.path)
 
                 # Print parent node for better navigation
                 if self.pretty_format:
-                    print(ENUM.YAML_colours.BOLD + 'Parent: ' + ENUM.YAML_colours.DEFAULT +
+                    print(enum.Colors.BOLD + 'Parent: ' + enum.Colors.DEFAULT +
                           (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 else:
                     print('Parent: ' + (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
@@ -596,69 +599,69 @@ class YAML_HotValidator:
                 # Invalid references
                 if node.invalid:
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD + 'Invalid references:' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Invalid references:' + enum.Colors.DEFAULT)
                     else:
                         print('Invalid references:')
 
                     for ref in node.invalid:
                         # get_resource
-                        if ref.type == ENUM.YAML_Types.GET_RESOURCE:
+                        if ref.type == enum.Types.GET_RESOURCE:
                             if self.pretty_format:
-                                print ('Resource ' + ENUM.YAML_colours.YELLOW + ref.referent +
-                                       ENUM.YAML_colours.DEFAULT + ' referred in ' + ENUM.YAML_colours.YELLOW +
-                                       ref.element + ENUM.YAML_colours.DEFAULT + ' is not declared.')
+                                print ('Resource ' + enum.Colors.YELLOW + ref.referent +
+                                       enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
+                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
                             else:
                                 print ('Resource ' + ref.referent + ' referred in ' + ref.element +
                                        ' is not declared.')
 
                         # get_param
-                        elif ref.type == ENUM.YAML_Types.GET_PARAM:
+                        elif ref.type == enum.Types.GET_PARAM:
                             if self.pretty_format:
-                                print ('Parameter ' + ENUM.YAML_colours.YELLOW + ref.referent +
-                                       ENUM.YAML_colours.DEFAULT + ' referred in ' + ENUM.YAML_colours.YELLOW +
-                                       ref.element + ENUM.YAML_colours.DEFAULT + ' is not declared.')
+                                print ('Parameter ' + enum.Colors.YELLOW + ref.referent +
+                                       enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
+                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
                             else:
                                 print ('Parameter ' + ref.referent + ' referred in ' + ref.element +
                                        ' is not declared.')
 
                         # get_attr
-                        elif ref.type == ENUM.YAML_Types.GET_ATTR:
+                        elif ref.type == enum.Types.GET_ATTR:
                             if self.pretty_format:
-                                print ('Instance ' + ENUM.YAML_colours.YELLOW + ref.referent +
-                                       ENUM.YAML_colours.DEFAULT + ' referred by ' + ENUM.YAML_colours.YELLOW +
-                                       'get_attr' + ENUM.YAML_colours.DEFAULT + ' in ' + ENUM.YAML_colours.YELLOW +
-                                       ref.element + ENUM.YAML_colours.DEFAULT + ' is not declared.')
+                                print ('Instance ' + enum.Colors.YELLOW + ref.referent +
+                                       enum.Colors.DEFAULT + ' referred by ' + enum.Colors.YELLOW +
+                                       'get_attr' + enum.Colors.DEFAULT + ' in ' + enum.Colors.YELLOW +
+                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
                             else:
                                 print ('Instance ' + ref.referent + ' referred by get_attr in ' +
                                        ref.element + ' is not declared.')
 
                         # missing property
-                        elif ref.type == ENUM.YAML_Types.MISS_PROP:
+                        elif ref.type == enum.Types.MISS_PROP:
                             if self.pretty_format:
-                                print('Parameter ' + ENUM.YAML_colours.YELLOW + ref.referent + ENUM.YAML_colours.DEFAULT +
-                                      ' has no corresponding default or property in ' +  ENUM.YAML_colours.YELLOW +
-                                      ref.element + ENUM.YAML_colours.DEFAULT + ' in ' +
-                                      ENUM.YAML_colours.YELLOW + os.path.relpath(ref.parent, self.init_dir) + ENUM.YAML_colours.DEFAULT + '.')
+                                print('Parameter ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
+                                      ' has no corresponding default or property in ' +  enum.Colors.YELLOW +
+                                      ref.element + enum.Colors.DEFAULT + ' in ' +
+                                      enum.Colors.YELLOW + os.path.relpath(ref.parent, self.init_dir) + enum.Colors.DEFAULT + '.')
                             else:
                                 print('Parameter ' + ref.referent + ' has no corresponding default or property in ' +
                                       ref.element + ' in ' + os.path.relpath(ref.parent, self.init_dir) + '.')
 
                         # missing parameter
-                        elif ref.type == ENUM.YAML_Types.MISS_PARAM:
+                        elif ref.type == enum.Types.MISS_PARAM:
                             if self.pretty_format:
-                                print('Property ' + ENUM.YAML_colours.YELLOW + ref.referent + ENUM.YAML_colours.DEFAULT +
-                                      ' has no corresponding parameter in ' + ENUM.YAML_colours.YELLOW +
-                                      os.path.relpath(ref.parent, self.init_dir) + ENUM.YAML_colours.DEFAULT + '.')
+                                print('Property ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
+                                      ' has no corresponding parameter in ' + enum.Colors.YELLOW +
+                                      os.path.relpath(ref.parent, self.init_dir) + enum.Colors.DEFAULT + '.')
                             else:
                                 print('Property ' + ref.referent + ' has no corresponding parameter in ' +
                                       os.path.relpath(ref.parent, self.init_dir) + '.')
 
                         # dependency not found
-                        elif ref.type == ENUM.YAML_Types.DEPENDS_ON:
+                        elif ref.type == enum.Types.DEPENDS_ON:
                             if self.pretty_format:
-                                print('Resource ' + ENUM.YAML_colours.YELLOW + ref.referent + ENUM.YAML_colours.DEFAULT +
-                                      ' that resource ' +  ENUM.YAML_colours.YELLOW +
-                                      ref.element + ENUM.YAML_colours.DEFAULT + ' depends on is not declared.')
+                                print('Resource ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
+                                      ' that resource ' +  enum.Colors.YELLOW +
+                                      ref.element + enum.Colors.DEFAULT + ' depends on is not declared.')
                             else:
                                 print('Resource ' + ref.referent + ' that resource ' +
                                       ref.element + ' depends on is not declared.')
@@ -667,14 +670,14 @@ class YAML_HotValidator:
                 # Unused parameters (optional) ??
                 if self.print_unused and (False in [x.used for x in node.params]):
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD +  'Unused parameters:' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD +  'Unused parameters:' + enum.Colors.DEFAULT)
                     else:
                         print('Unused parameters:')
 
                     for par in node.params:
                         if par.used == False:
                             if self.pretty_format:
-                                print('- ' + ENUM.YAML_colours.YELLOW + par.name + ENUM.YAML_colours.DEFAULT)
+                                print('- ' + enum.Colors.YELLOW + par.name + enum.Colors.DEFAULT)
                             else:
                                 print('- ' + par.name)
                     print('')
@@ -682,15 +685,15 @@ class YAML_HotValidator:
                 # Print unused resources (optional)
                 if (self.print_unused) and [True for x in node.resources if not x.used]:
                     if (self.pretty_format):
-                        print(ENUM.YAML_colours.BOLD + 'Resources without reference:' +
-                              ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Resources without reference:' +
+                              enum.Colors.DEFAULT)
                     else:
                         print('Resources without reference:')
 
                     for resource in node.resources:
                         if resource.used == False:
                             if self.pretty_format:
-                                print('- ' + ENUM.YAML_colours.YELLOW + resource.name + ENUM.YAML_colours.DEFAULT +
+                                print('- ' + enum.Colors.YELLOW + resource.name + enum.Colors.DEFAULT +
                                       ' (' + resource.type + ')')
                             else:
                                 print('- ' + resource.name)
@@ -699,14 +702,14 @@ class YAML_HotValidator:
                 # Print file status as OK if there were no problems
                 if node.ok:
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD + 'Status: ' + ENUM.YAML_colours.GREEN +
-                              'OK' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.GREEN +
+                              'OK' + enum.Colors.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(ENUM.YAML_colours.BOLD + 'Status: ' + ENUM.YAML_colours.RED +
-                              'FAILED' + ENUM.YAML_colours.DEFAULT)
+                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.RED +
+                              'FAILED' + enum.Colors.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -715,10 +718,10 @@ class YAML_HotValidator:
         # Print tree structure
         if self.print_structure:
             if self.pretty_format:
-                print(ENUM.YAML_colours.ORANGE + ENUM.YAML_colours.BOLD + ENUM.YAML_colours.UNDERLINE +
-                      'Structure:' + ENUM.YAML_colours.DEFAULT)
+                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
+                      'Structure:' + enum.Colors.DEFAULT)
             else:
                 print('Structure:')
 
-            self.print_tree(self.templates[-1], ENUM.YAML_tree_info.ONLY, 0, [])
+            self.print_tree(self.templates[-1], enum.TreeInfo.ONLY, 0, [])
             print('\n')
