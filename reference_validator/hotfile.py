@@ -42,7 +42,7 @@ class HotFile:
         ''' Validates YAML file. '''
 
         # Add current node at the beginning
-        curr_nodes.insert(0, self)
+        curr_nodes.append(self)
 
         # Open file
         try:
@@ -70,13 +70,13 @@ class HotFile:
         # Examine children nodes to get the full information about references
         for resource in self.resources:
             if resource.type.endswith('.yaml'):
-                templates.insert(0, HotFile(self, resource.type))
+                templates.append(HotFile(self, resource.type))
 
                 # Add child
-                resource.child = templates[0]
+                resource.child = templates[-1]
 
                 # Start validating child
-                templates[0].load_file(curr_nodes, templates, environments,
+                templates[-1].load_file(curr_nodes, templates, environments,
                                        os.path.join(curr_path, os.path.dirname(self.path)))
 
                 # The whole subtree with root = current node is loaded
@@ -89,7 +89,7 @@ class HotFile:
         ''' After loading information, validates references in file.'''
 
         # Add current node at the beginning
-        curr_nodes.insert(0, self)
+        curr_nodes.append(self)
 
         # Iterate over sections (all children validated by now)
         for section, instances in six.iteritems(self.structure):
@@ -413,7 +413,7 @@ class HotFile:
                                     if type(value[i]) == str:
                                         error = value[i]
                                     else:
-                                        error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
+                                        error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values()[0])[0]
                                     break
 
                         if error is None:
@@ -492,7 +492,7 @@ class HotFile:
                                 if type(value[i]) == str:
                                     error = value[i]
                                 else:
-                                    error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values())[0][0]
+                                    error = 'nested ' + list(value[i].keys())[0] + ' - ' + list(value[i].values()[0])[0]
                                 break
 
 

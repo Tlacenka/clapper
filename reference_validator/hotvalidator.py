@@ -59,7 +59,7 @@ class HotValidator:
         # Check HOT file (-f)
         abs_path = os.path.abspath(arguments['template_file'])
         if abs_path.endswith('yaml'):
-            self.templates.insert(0, hotfile.HotFile(None, abs_path))
+            self.templates.append(hotfile.HotFile(None, abs_path)) #
         else:
             print('Wrong template file suffix (YAML expected).')
             sys.exit(1)
@@ -69,7 +69,7 @@ class HotValidator:
             for env in list(arguments['environment_file']):
                 abs_path = os.path.abspath(env)
                 if abs_path.endswith('yaml'):
-                    self.environments.insert(0, hotclasses.Environment(None, abs_path))
+                    self.environments.append(hotclasses.Environment(None, abs_path)) #
 
         # Additional parameters (-P)
         if arguments['parameters']:
@@ -98,7 +98,7 @@ class HotValidator:
                 sys.exit(1)
 
             # Add to currently validated files
-            self.curr_nodes.insert(0, env_node)
+            self.curr_nodes.append(env_node) #
 
             # Save mappings
             if 'resource_registry' in env_node.structure:
@@ -134,13 +134,13 @@ class HotValidator:
                     found = False
                     for m in self.mappings:
                         if ((m.path == child) and (m.parent in self.environments)):
-                            env_node.children.insert(0, m)
+                            env_node.children.append(m) #
                             found = True
                             break
 
                     if not found:
-                        env_node.children.insert(0, hotfile.HotFile(env_node, child))
-                        self.mappings.append(env_node.children[0])
+                        env_node.children.append(hotfile.HotFile(env_node, child)) #
+                        self.mappings.append(env_node.children[-1])
 
             # Remove from currently validated files
             self.curr_nodes.remove(env_node)
@@ -153,16 +153,16 @@ class HotValidator:
 
                 # Try to find param_default
                 if p.default is None:
-                    flag = False
+                    found = False
                     for env in self.environments:
                         for key, value in six.iteritems(env.params_default):
                             
                             # Add default
                             if p.name == key:
                                 p.default = value
-                                flag = True
+                                found = True
                                 break
-                        if flag:
+                        if found:
                             break
 
     def add_parameters(self):
@@ -170,21 +170,21 @@ class HotValidator:
             Add parameter values from environments to root template file
         '''
 
-        # Add parameters and values from prompt
+        # Add parameters and values from prompt (-P)
         if self.parameters:
             for key, value in six.iteritems(self.parameters):
 
                 # If parameter exists, only insert value
-                flag = False
-                for p in self.templates[-1].params:
+                found = False
+                for p in self.templates[0].params: #
                     if p.name == key:
                         p.value = value
-                        flag = True
+                        found = True
                         break
 
                 # If not, create one (TODO or error?)
                 if not flag:
-                    self.templates[-1].params.insert(0, hotclasses.Prop_Par((key, value), True))
+                    self.templates[0].params.append(hotclasses.Prop_Par((key, value), True)) #
 
         # Assign values to parameters from environments
         for env in self.environments:
@@ -192,16 +192,16 @@ class HotValidator:
 
                 # Go through all parameters declare in environments
                 for key, value in six.iteritems(env.params):
-                    flag = False
-                    for p in self.templates[-1].params:
+                    found = False
+                    for p in self.templates[0].params:
                         if p.name == key:
                             p.value = value
-                            flag = True
+                            found = True
                             break
 
                     # If parameter does not exist in the root template
-                    if not flag:
-                        self.templates[-1].invalid.insert(0, Reference(key, env.path, enum.Types.GET_PARAM, None))
+                    if not found:
+                        self.templates[0].invalid.append(hotclasses.Reference(key, env.path, enum.Types.GET_PARAM, None))
 
     def apply_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
@@ -301,7 +301,7 @@ class HotValidator:
         # Check parameters section
         for env in self.environments:
             for par in list(env.params.keys()):
-                if par in [p.name for p in self.templates[-1].params]:
+                if par in [p.name for p in self.templates[0].params]:
                     env.params[par] = True
                     break
 
@@ -322,7 +322,7 @@ class HotValidator:
         ''' Validate properties x parameters in tree of templates. '''
 
         # Add current node at the beginning
-        self.curr_nodes.insert(0, self)
+        self.curr_nodes.append(self)
 
         # Go through all resources in current template
         for resource in template.resources:
@@ -423,7 +423,7 @@ class HotValidator:
 
         # Load HOTs in mappings
         # All mappings are at the beginning, followed by children nodes
-        for hot in list(reversed(self.mappings)):
+        for hot in self.mappings:
             if hot.parent in self.environments:
                 hot.load_file(self.curr_nodes, self.mappings,
                                   self.environments, os.path.join(self.init_dir,
@@ -461,9 +461,9 @@ class HotValidator:
             time.sleep(self.sleep_time)
 
         # Check properties x parameters
-        self.validate_properties(self.templates[-1])
+        self.validate_properties(self.templates[0])
 
-        for hot in list(reversed(self.mappings)):
+        for hot in self.mappings:
             if hot.parent in self.environments:
                 self.validate_properties(hot)
 
@@ -472,7 +472,7 @@ class HotValidator:
             time.sleep(self.sleep_time)
 
         # Validate references
-        self.validate_references(self.templates[-1])
+        self.validate_references(self.templates[0])
 
         if self.print_nyan:
             progress.task_done()
@@ -562,21 +562,20 @@ class HotValidator:
 
 
         # HOT Files and mappings
-        rev_templates = list(reversed(self.templates))
-        for hot in [x for x in [rev_templates, list(reversed(self.mappings))] if len(x)]:
+        for hot in [x for x in [self.templates, self.mappings] if len(x)]:
             if self.pretty_format:
                 print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
-                      ('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:') +
+                      ('HOT Files:' if hot == self.templates else 'Mapped HOT Files:') +
                       enum.Colors.DEFAULT)
             else:
-                print(('HOT Files:' if hot == rev_templates else 'Mapped HOT Files:'))
+                print(('HOT Files:' if hot == self.templates else 'Mapped HOT Files:'))
 
             # Print total
             if self.pretty_format:
-                print(enum.Colors.BOLD + 'Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)) +
+                print(enum.Colors.BOLD + 'Total: ' + str(len(self.templates) if hot == self.templates else len(self.mappings)) +
                       enum.Colors.DEFAULT)
             else:
-                print ('Total: ' + str(len(self.templates) if hot == rev_templates else len(self.mappings)))
+                print ('Total: ' + str(len(self.templates) if hot == self.templates else len(self.mappings)))
             print('')
 
             for node in hot:
