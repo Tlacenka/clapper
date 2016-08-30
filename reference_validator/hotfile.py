@@ -199,14 +199,14 @@ class HotFile:
                               break
 
                            else:
-                               flag = False
+                               found = False
                                for k, v in six.iteritems(get_value):
                                    if k == value[i]:
                                        get_value = v
-                                       flag = True
+                                       found = True
                                        break
 
-                               if not flag:
+                               if not found:
                                   error = value[i]
                                   break
 
@@ -319,12 +319,12 @@ class HotFile:
                 # resource.<name> used
                 if value[1].startswith('resource.'):
                     string = value[1].split('.')
-                    flag = False
+                    found = False
                     if r.grouptype == '':
                         for r in get_value.child.resources:
                             if string[1] == r.name:
                                 get_value = r
-                                flag = True
+                                found = True
                                 break
                     # TODO longer hierarchy
                     elif r.grouptype == 'OS::Heat::ResourceGroup':
@@ -332,10 +332,10 @@ class HotFile:
                             if ((string[2] == k) and (type(v) == dict) and
                                 ('value' in v.keys())):
                                 get_value = v['value']
-                                flag = True
+                                found = True
                                 break
 
-                    if not flag:
+                    if not found:
                         error = value[1]
                     else:
                         cur_resource.used = True
@@ -350,10 +350,10 @@ class HotFile:
                         if ((value[2] == k) and (type(v) == dict) and
                                 ('value' in v.keys())):
                             get_value = v['value']
-                            flag = True
+                            found = True
                             break
 
-                    if not flag:
+                    if not found:
                         error = value[1]
                     else:
                         cur_resource.used = True
@@ -362,16 +362,16 @@ class HotFile:
                 # outputs_list used in case of autoscaling group TODO list?
                 elif ((get_value.grouptype == 'OS::Heat::AutoScalingGroup') and
                       (len(value) >= 3) and (value[1] == 'outputs_list')):
-                    flag = False
+                    found = False
                     for k, v in six.iteritems(get_value.child.outputs):
                         if ((k == value[2]) and (type(v) is dict) and
                             ('value' in v.keys())):
                             cur_file = get_value.child
                             get_value = v['value']
-                            flag = True
+                            found = True
                             break
 
-                    if not flag:
+                    if not found:
                         error = value[1]
                     else:
                         # If the value is in get_, validate nested get_
@@ -424,14 +424,14 @@ class HotFile:
                 # TODO remove duplicate sections from outputs_list and outputs
                 else:
                     # Find output
-                    flag = False
+                    found = False
                     for k, v in six.iteritems(get_value.child.outputs):
                         if value[1] == k:
                             cur_file = get_value.child
                             get_value = v
-                            flag = True
+                            found = True
                             break
-                    if not flag:
+                    if not found:
                         error = value[1]
                     if error is None:
                         # Go to value section of the output
@@ -522,12 +522,12 @@ class HotFile:
         differences = list(set([x.name for x in self.params]) ^ set([y.name for y in resource.properties]))
 
         for diff in differences:
-            flag = False
+            found = False
 
             # Missing property for parameter
             for p in self.params:
                 if diff == p.name:
-                    flag = True
+                    found = True
 
                     if (p.default is None):
                         self.invalid.append(hotclasses.Reference(
@@ -538,7 +538,7 @@ class HotFile:
             
                 
             # Missing parameter for property
-            if not flag:
+            if not found:
                 for p in resource.properties:
                     if diff == p.name:
                         self.invalid.append(hotclasses.Reference(
@@ -559,7 +559,7 @@ class HotFile:
 
         for r in self.resources:
             if 'depends_on' in r.structure:
-                flag = False
+                found = False
                 if type(r.structure['depends_on']) == str:
                     dependencies = [r.structure['depends_on']]
                 else:
@@ -570,10 +570,10 @@ class HotFile:
                    for x in self.resources:
                        if x.name == d:
                            x.used = True
-                           flag = True
+                           found = True
                            break
 
-                   if not flag:
+                   if not found:
 
                        # Searched resource does not exist
                        self.invalid.append(hotclasses.Reference(d, r.name,

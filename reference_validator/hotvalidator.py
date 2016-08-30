@@ -183,7 +183,7 @@ class HotValidator:
                         break
 
                 # If not, create one (TODO or error?)
-                if not flag:
+                if not found:
                     self.templates[0].params.append(hotclasses.Prop_Par((key, value), True)) #
 
         # Assign values to parameters from environments
@@ -261,7 +261,7 @@ class HotValidator:
         # Direct mapping
         else:
 
-            flag = False
+            found = False
             # Find all corresponding resources
             for hot in self.templates + self.mappings:
                 for r in hot.resources:
@@ -276,7 +276,7 @@ class HotValidator:
                             # Other nonYAML type
                             if not mapped.endswith('.yaml'):
                                 r.type = mapped
-                                flag = True
+                                found = True
 
                             # YAML mapping
                             elif (((type(mapped) == str) and (m.path == mapped)) or
@@ -285,9 +285,9 @@ class HotValidator:
                                 r.type = mapped
                                 r.child = m
                                 m.parent = r.hotfile
-                                flag = True
+                                found = True
 
-            if flag:
+            if found:
                 ret = self.find_mapping(mapped)
                 if ret is not None:
                     # If yes, apply mappings (might be that this mapping
