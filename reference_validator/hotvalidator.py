@@ -59,7 +59,7 @@ class HotValidator:
         # Check HOT file (-f)
         abs_path = os.path.abspath(arguments['template_file'])
         if abs_path.endswith('yaml'):
-            self.templates.append(hotfile.HotFile(None, abs_path)) #
+            self.templates.append(hotfile.HotFile(None, abs_path))
         else:
             print('Wrong template file suffix (YAML expected).')
             sys.exit(1)
@@ -69,7 +69,7 @@ class HotValidator:
             for env in list(arguments['environment_file']):
                 abs_path = os.path.abspath(env)
                 if abs_path.endswith('yaml'):
-                    self.environments.append(hotclasses.Environment(None, abs_path)) #
+                    self.environments.append(hotclasses.Environment(None, abs_path))
 
         # Additional parameters (-P)
         if arguments['parameters']:
@@ -95,6 +95,9 @@ class HotValidator:
                     env_node.structure = yaml.load(fd.read())
             except IOError:
                 print('File ' + env_node.path + ' could not be opened.')
+                sys.exit(1)
+            except Exception as err:
+                print('ERROR in file ' + env_node.path + ': ' + str(err), file=sys.stderr)
                 sys.exit(1)
 
             # Add to currently validated files
@@ -134,12 +137,12 @@ class HotValidator:
                     found = False
                     for m in self.mappings:
                         if ((m.path == child) and (m.parent in self.environments)):
-                            env_node.children.append(m) #
+                            env_node.children.append(m)
                             found = True
                             break
 
                     if not found:
-                        env_node.children.append(hotfile.HotFile(env_node, child)) #
+                        env_node.children.append(hotfile.HotFile(env_node, child))
                         self.mappings.append(env_node.children[-1])
 
             # Remove from currently validated files
@@ -176,7 +179,7 @@ class HotValidator:
 
                 # If parameter exists, only insert value
                 found = False
-                for p in self.templates[0].params: #
+                for p in self.templates[0].params:
                     if p.name == key:
                         p.value = value
                         found = True
@@ -184,7 +187,7 @@ class HotValidator:
 
                 # If not, create one (TODO or error?)
                 if not found:
-                    self.templates[0].params.append(hotclasses.Prop_Par((key, value), True)) #
+                    self.templates[0].params.append(hotclasses.Prop_Par((key, value), True))
 
         # Assign values to parameters from environments
         for env in self.environments:

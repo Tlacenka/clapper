@@ -51,6 +51,9 @@ class HotFile:
         except IOError:
             print('File ' + self.path + ' could not be opened.', file=sys.stderr)
             sys.exit(1)
+        except Exception as err:
+            print('ERROR in file ' + self.path + ': ' + str(err), file=sys.stderr)
+            sys.exit(1)
 
         # Save all parameters names, resources and properties
         if 'parameters' in self.structure:
