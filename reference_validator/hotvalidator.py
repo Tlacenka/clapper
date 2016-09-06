@@ -73,19 +73,21 @@ class HotValidator:
 
         # Additional parameters (-P) separately / separated by ';'
         if arguments['parameters']:
-            print(arguments['parameters'], type(arguments['parameters']))
-            for par in list(arguments['parameters']):
+            
+            # ';' used
+            if (len(arguments['parameters']) == 1) and (';' in arguments['parameters'][0]):
 
                 # Split to key value pairs
-                if type(par) == list:
-                    par_str = par[0]
+                par_list = arguments['parameters'][0].split(';')
+            else:
+                par_list = arguments['parameters']
+            
 
-                par_list = par_str.split(';')
+            # Assign KV to self.parameters
+            for par in par_list:
+                kv = par.split('=')
+                self.parameters[kv[0]] = kv[1]
 
-                # Assign KV to self.parameters
-                for p in par_list:
-                    kv = p.split('=')
-                    self.parameters[kv[0]] = kv[1]
 
     def load_environments(self):
         ''' Goes through all environment files, saves information about them. '''

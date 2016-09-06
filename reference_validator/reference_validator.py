@@ -27,8 +27,8 @@ def main():
                         help='Environment files to be used.')
     parser.add_argument('-f', '--template-file', metavar='path/to/file',
                         help='HOT file to be used.')
-    parser.add_argument('-P', '--parameters', metavar='<KEY1=VALUE1;KEY2=VALUE2...>', nargs='+', action='append',
-                        help='Parameter values used in the templates.') # nargs, append or all in one??
+    parser.add_argument('-P', '--parameters', metavar='<KEY1=VALUE1;KEY2=VALUE2...>', action='append',
+                        help='Parameter values used in the templates.')
     parser.add_argument('-n', '--nyan', action='store_true',
                         help='When true, prints nyanbar.')
 
