@@ -27,7 +27,7 @@ class HotFile:
         self.parent = parent_node   # Parent node or nothing in the case of root node
 
         self.resources = []         # Resource list
-        self.params = []            # list of Prop_Par
+        self.params = []            # list of PropertyParameter
                                     # TODO exception for root template when checking properties values
 
         self.outputs = {}           # {name : <value structure>}
@@ -58,7 +58,7 @@ class HotFile:
         # Save all parameters names, resources and properties
         if 'parameters' in self.structure:
             for param in self.structure['parameters'].items():
-                self.params.append(hotclasses.Prop_Par(param, True))
+                self.params.append(hotclasses.PropertyParameter(param, True))
 
         # Save name and structure of each resource
         if 'resources' in self.structure:
@@ -228,8 +228,8 @@ class HotFile:
 
             if error is not None:
                 # Add it to invalid references
-                self.invalid.append(hotclasses.Reference(value[1], name,
-                                    enum.Types.GET_PARAM, None))
+                self.invalid.append(hotclasses.InvalidReference(value[1], name,
+                                    enum.ErrorTypes.GET_PARAM, None))
                 self.ok = False
                 return None
 
@@ -247,8 +247,8 @@ class HotFile:
             if value not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
                 if value not in [x.name for x in self.params]:
                     # Add it to invalid references
-                    self.invalid.append(hotclasses.Reference(value, name,
-                                         enum.Types.GET_PARAM, None))
+                    self.invalid.append(hotclasses.InvalidReference(value, name,
+                                         enum.ErrorTypes.GET_PARAM, None))
                     self.ok = False
                     return None
 
@@ -261,8 +261,8 @@ class HotFile:
                     return (par.value if par.value is not None else par.default)
         else:
              # Add it to invalid references
-             self.invalid.append(hotclasses.Reference(value, name,
-                                 enum.Types.GET_PARAM, None))
+             self.invalid.append(hotclasses.InvalidReference(value, name,
+                                 enum.ErrorTypes.GET_PARAM, None))
              self.ok = False
              return None
 
@@ -279,8 +279,8 @@ class HotFile:
                 return r
 
         # If not found, add it to invalid references
-        self.invalid.append(hotclasses.Reference(value, name,
-                            enum.Types.GET_RESOURCE, None))
+        self.invalid.append(hotclasses.InvalidReference(value, name,
+                            enum.ErrorTypes.GET_RESOURCE, None))
         self.ok = False
         return None
 
@@ -508,9 +508,9 @@ class HotFile:
             cur_resource.used = True
             return get_value
         else:
-            self.invalid.append(hotclasses.Reference(error,
+            self.invalid.append(hotclasses.InvalidReference(error,
                                 name + ' - output of ' + value[0],
-                                enum.Types.GET_ATTR, None))
+                                enum.ErrorTypes.GET_ATTR, None))
             self.ok = False
             return None
 
@@ -533,9 +533,9 @@ class HotFile:
                     found = True
 
                     if (p.default is None):
-                        self.invalid.append(hotclasses.Reference(
+                        self.invalid.append(hotclasses.InvalidReference(
                                             diff, resource.name,
-                                            enum.Types.MISS_PROP, parent.path))
+                                            enum.ErrorTypes.MISS_PROP, parent.path))
                         self.ok = False
                         break
             
@@ -544,13 +544,13 @@ class HotFile:
             if not found:
                 for p in resource.properties:
                     if diff == p.name:
-                        self.invalid.append(hotclasses.Reference(
+                        self.invalid.append(hotclasses.InvalidReference(
                                         diff, resource.name,
-                                        enum.Types.MISS_PARAM, self.path))
+                                        enum.ErrorTypes.MISS_PARAM, self.path))
                         self.ok = False
                         break
 
-        # Share Prop_Par for each match
+        # Share PropertyParameter for each match
         for par in range(len(self.params)):
             for prop in resource.properties:
                 if self.params[par].name == prop.name:
@@ -565,7 +565,7 @@ class HotFile:
                 found = False
                 if type(r.structure['depends_on']) == str:
                     dependencies = [r.structure['depends_on']]
-                else:
+                elif type(r.structure['depends_on']) == list:
                     dependencies = r.structure['depends_on']
 
                 # Check dependencies
@@ -579,6 +579,6 @@ class HotFile:
                    if not found:
 
                        # Searched resource does not exist
-                       self.invalid.append(hotclasses.Reference(d, r.name,
-                                           enum.Types.DEPENDS_ON, None))
+                       self.invalid.append(hotclasses.InvalidReference(d, r.name,
+                                           enum.ErrorTypes.DEPENDS_ON, None))
                        self.ok = False

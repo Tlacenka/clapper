@@ -3,7 +3,7 @@
 
 # File: enum.py
 # Brief: Additional classes defining enumeration types for HOT reference validator
-# Classes: Colors, TreeInfo, Types, Grouptypes
+# Classes: Colors, TreeInfo, ErrorTypes, Grouptypes
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
@@ -25,7 +25,7 @@ class TreeInfo:
     LAST = 1 # Last sibling
     ONLY = 2 # Only one child
 
-class Types:
+class ErrorTypes:
     ''' Enumerated reference get_ functions + properties:parameters reference. '''
 
     GET_RESOURCE  = 1 # get_resource

@@ -71,12 +71,16 @@ class HotValidator:
                 if abs_path.endswith('yaml'):
                     self.environments.append(hotclasses.Environment(None, abs_path))
 
-        # Additional parameters (-P)
+        # Additional parameters (-P) separately / separated by ';'
         if arguments['parameters']:
+            print(arguments['parameters'], type(arguments['parameters']))
             for par in list(arguments['parameters']):
 
                 # Split to key value pairs
-                par_list = par.split(';')
+                if type(par) == list:
+                    par_str = par[0]
+
+                par_list = par_str.split(';')
 
                 # Assign KV to self.parameters
                 for p in par_list:
@@ -187,7 +191,7 @@ class HotValidator:
 
                 # If not, create one (TODO or error?)
                 if not found:
-                    self.templates[0].params.append(hotclasses.Prop_Par((key, value), True))
+                    self.templates[0].params.append(hotclasses.PropertyParameter((key, value), True))
 
         # Assign values to parameters from environments
         for env in self.environments:
@@ -204,7 +208,7 @@ class HotValidator:
 
                     # If parameter does not exist in the root template
                     if not found:
-                        self.templates[0].invalid.append(hotclasses.Reference(key, env.path, enum.Types.GET_PARAM, None))
+                        self.templates[0].invalid.append(hotclasses.InvalidReference(key, env.path, enum.ErrorTypes.GET_PARAM, None))
 
     def apply_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
@@ -214,17 +218,6 @@ class HotValidator:
             for origin, mapped in six.iteritems(env.resource_registry):
                 self.map_resources(origin, mapped, env)
 
-    def find_mapping(self, mapping):
-        ''' Searches if there is a mapping with passed side available.
-            mapping - left side of mapping
-            returns first found right side of the mapping if found or None
-        '''
-
-        for env in self.environments:
-            for origin, mapped in six.iteritems(env.resource_registry):
-                if origin == mapping:
-                    return (mapped, env)
-        return None
 
     def map_resources(self, origin, mapped, env):
         ''' Finds applicable resources, changes their type.
@@ -243,23 +236,16 @@ class HotValidator:
                     # Change their type
                     if (origin.startswith('*') and r.type.endswith(origin[1:])):
                         r.type = r.type.replace(origin[1:], mapped[1:])
-
-                        # Find out if newly mapped resources have other applicable mappings
-                        ret = self.find_mapping(r.type)
-                        if ret is not None:
-                            # If yes, apply mappings (might be that this mapping
-                            # has already been realized in apply_mappings)
-                            self.map_resources(r.type, ret[0], ret[1]) 
                         
                     elif (origin.endswith('*') and r.type.startswith(origin[:-1])):
                         r.type = r.type.replace(origin[:-1], mapped[:-1])
 
-                        # Find out if newly mapped resources have other applicable mappings
-                        ret = self.find_mapping(r.type)
-                        if ret is not None:
-                            # If yes, apply mappings (might be that this mapping
-                            # has already been realized in apply_mappings)
-                            self.map_resources(r.type, ret[0], ret[1]) 
+                    # Find out if newly mapped resources have other applicable mappings
+                    ret = self.find_mapping(r.type)
+                    if ret is not None:
+                        # If yes, apply mappings (might be that this mapping
+                        # has already been realized in apply_mappings)
+                        self.map_resources(r.type, ret[0], ret[1]) 
 
         # Direct mapping
         else:
@@ -298,6 +284,19 @@ class HotValidator:
                     self.map_resources(mapped, ret[0], ret[1]) 
 
 
+    def find_mapping(self, mapping):
+        ''' Searches if there is a mapping with passed side available.
+            mapping - left side of mapping
+            returns first found right side of the mapping if found or None
+        '''
+
+        for env in self.environments:
+            for origin, mapped in six.iteritems(env.resource_registry):
+                if origin == mapping:
+                    return (mapped, env)
+        return None
+
+
     def validate_env_params(self):
         ''' Checks parameters section of environment files. '''
 
@@ -311,11 +310,7 @@ class HotValidator:
         # Check parameter_defaults section
         for env in self.environments:
             for par in list(env.params_default.keys()):
-                for hot in self.templates:
-                    if par in [x.name for x in hot.params]:
-                        env.params_default[par] = True
-                        break
-                for hot in self.mappings:
+                for hot in self.templates + self.mappings:
                     if par in [x.name for x in hot.params]:
                         env.params_default[par] = True
                         break
@@ -530,8 +525,9 @@ class HotValidator:
                             print ('- ' + par)
                     print('')
 
-                # Parameter_defaults section (optional)
-                if self.print_unused and (False in list(env.params_default.values())):
+                # Parameter_defaults section
+                if False in list(env.params_default.values()):
+                    env.ok = False
                     if self.pretty_format:
                         print (enum.Colors.BOLD + 'Parameter defaults without match:' +
                                enum.Colors.DEFAULT)
@@ -607,7 +603,7 @@ class HotValidator:
 
                     for ref in node.invalid:
                         # get_resource
-                        if ref.type == enum.Types.GET_RESOURCE:
+                        if ref.type == enum.ErrorTypes.GET_RESOURCE:
                             if self.pretty_format:
                                 print ('Resource ' + enum.Colors.YELLOW + ref.referent +
                                        enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
@@ -617,7 +613,7 @@ class HotValidator:
                                        ' is not declared.')
 
                         # get_param
-                        elif ref.type == enum.Types.GET_PARAM:
+                        elif ref.type == enum.ErrorTypes.GET_PARAM:
                             if self.pretty_format:
                                 print ('Parameter ' + enum.Colors.YELLOW + ref.referent +
                                        enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
@@ -627,7 +623,7 @@ class HotValidator:
                                        ' is not declared.')
 
                         # get_attr
-                        elif ref.type == enum.Types.GET_ATTR:
+                        elif ref.type == enum.ErrorTypes.GET_ATTR:
                             if self.pretty_format:
                                 print ('Instance ' + enum.Colors.YELLOW + ref.referent +
                                        enum.Colors.DEFAULT + ' referred by ' + enum.Colors.YELLOW +
@@ -638,7 +634,7 @@ class HotValidator:
                                        ref.element + ' is not declared.')
 
                         # missing property
-                        elif ref.type == enum.Types.MISS_PROP:
+                        elif ref.type == enum.ErrorTypes.MISS_PROP:
                             if self.pretty_format:
                                 print('Parameter ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
                                       ' has no corresponding default or property in ' +  enum.Colors.YELLOW +
@@ -649,7 +645,7 @@ class HotValidator:
                                       ref.element + ' in ' + os.path.relpath(ref.parent, self.init_dir) + '.')
 
                         # missing parameter
-                        elif ref.type == enum.Types.MISS_PARAM:
+                        elif ref.type == enum.ErrorTypes.MISS_PARAM:
                             if self.pretty_format:
                                 print('Property ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
                                       ' has no corresponding parameter in ' + enum.Colors.YELLOW +
@@ -659,7 +655,7 @@ class HotValidator:
                                       os.path.relpath(ref.parent, self.init_dir) + '.')
 
                         # dependency not found
-                        elif ref.type == enum.Types.DEPENDS_ON:
+                        elif ref.type == enum.ErrorTypes.DEPENDS_ON:
                             if self.pretty_format:
                                 print('Resource ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
                                       ' that resource ' +  enum.Colors.YELLOW +
@@ -669,8 +665,8 @@ class HotValidator:
                                       ref.element + ' depends on is not declared.')
                     print('')
 
-                # Unused parameters (optional) ??
-                if self.print_unused and (False in [x.used for x in node.params]):
+                # Unused parameters
+                if False in [x.used for x in node.params]:
                     if self.pretty_format:
                         print(enum.Colors.BOLD +  'Unused parameters:' + enum.Colors.DEFAULT)
                     else:

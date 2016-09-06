@@ -3,7 +3,7 @@
 
 # File: hotclasses.py
 # Brief: Additional classes used for HOT reference validation
-# Classes: Environment, Prop_Par, Reference, Resource
+# Classes: Environment, PropertyParamater, InvalidReference, Resource
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
@@ -30,7 +30,7 @@ class Environment:
 
         self.ok = True              # validation status
 
-class Prop_Par:
+class PropertyParameter:
     ''' Class for saving information about parameters and properties.
         Each parameter and its corresponding property share one. '''
 
@@ -103,17 +103,17 @@ class Resource:
                 # Load properties
                 for prop in self.structure['properties'][('resource' if
                             self.grouptype == enum.Grouptypes.ASG else 'resource_def')]['properties'].items():
-                    self.properties.append(Prop_Par(prop, False))
+                    self.properties.append(PropertyParameter(prop, False))
             else:
                 for prop in self.structure['properties'].items():
-                    self.properties.append(Prop_Par(prop, False))
+                    self.properties.append(PropertyParameter(prop, False))
 
 
-class Reference:
+class InvalidReference:
     ''' Saves all invalid references for output. In HotFile. '''
 
     def __init__(self, referent, element, ref_type, parent):
         self.referent = referent # name of referred element
         self.element = element   # in which resource was reference realized
-        self.type = ref_type     # type of referred attribute (Types)
+        self.type = ref_type     # type of referred attribute (ErrorTypes)
         self.parent = parent     # used in property reference
