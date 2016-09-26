@@ -73,7 +73,6 @@ class HotValidator:
 
         # Additional parameters (-P) separately / separated by ';'
         if arguments['parameters']:
-            
             # ';' used
             if (len(arguments['parameters']) == 1) and (';' in arguments['parameters'][0]):
 
@@ -81,7 +80,6 @@ class HotValidator:
                 par_list = arguments['parameters'][0].split(';')
             else:
                 par_list = arguments['parameters']
-            
 
             # Assign KV to self.parameters
             for par in par_list:

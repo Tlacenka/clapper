@@ -39,3 +39,25 @@ class Grouptypes:
     ''' Resource types for groups of resources '''
     ASG = 'OS::Heat::AutoScalingGroup'
     RG = 'OS::Heat::ResourceGroup'
+
+class GetAttrStates:
+    # Main states for initiating and ending FSM
+    INIT = 0
+    RESOLVED = 1
+    ERROR = 2
+
+    # Element formats
+    ELE_STR = 5         # usual element format - string
+    ELE_DIGIT = 6       # element is a digit
+    ELE_NESTED_DICT = 7 # element is a dictionary (nested)
+
+    # Keywords used for ASG, RG, special cases
+    RG_RESOURCE = 8       # 'resource.<number>.<resource name>' used
+    RG_ATTRIBUTES = 9     # 'attributes' keyword used
+    ASG_OUTPUTS_LIST = 10 # 'outputs_list' keyword used
+    ASG_OUTPUTS = 11      # 'outputs' keyword used
+    RESOURCE = 12         # 'resource.<name>' used
+
+    # Other cases
+    RESOURCE_NAME = 13    # first element is a resource name
+    OUTPUT_NAME  = 14     # second element is an output name
