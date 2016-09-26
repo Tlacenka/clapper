@@ -295,117 +295,230 @@ class HotFile:
         # main variables: cur_state, next_state, value
         cur_state = enum.GetAttrStates.INIT
         next_state = enum.GetAttrStates.INIT
-        value = None # Searched value
-        index = 0 # Index of current element
-        stop = False
-        resource = None # Referenced resource
-        nested_value = None # Value of currently resolved nested element
 
-        while not stop:
-            # INIT
+        resource = None # Referenced resource
+        value = None # Searched value
+
+        element = None # Value of current element (string)
+        index = 0 # Index of current element
+
+        while True:
+
+            # State transition
+            cur_state = next_state
+
+            # Initiate resolution
             if cur_state == enum.GetAttrStates.INIT:
                 if (type(hierarchy) == list) and (len(hierarchy) > 1):
                     next_state = enum.GetAttrStates.RESOURCE_NAME
                 else:
                     next_state = enum.GetAttrStates.ERROR
 
+            # End unsuccessfully, add invalid reference
             elif cur_state == enum.GetAttrStates.ERROR:
-                # End unsuccessfully
                 if type(hierarchy) == list:
                     self.invalid.append(hotclasses.InvalidReference(hierarchy[index],
                                 name + ' - output of ' + hierarchy[0],
                                 enum.ErrorTypes.GET_ATTR, None))
                 else:
-                    self.invalid.append(hotclasses.InvalidReference(error,
+                    self.invalid.append(hotclasses.InvalidReference(hierarchy[index],
                                 name + ' - output of ' + str(hierarchy),
                                 enum.ErrorTypes.GET_ATTR, None))
                 self.ok = False
                 return None
 
+            # End successfully
             elif cur_state == enum.GetAttrStates.RESOLVED:
-                # End successfully
                 resource.used = True
                 return value
 
+            # Resolve first element and its value, choose next state
             elif cur_state == enum.GetAttrStates.RESOURCE_NAME:
-                # Index is at 0
-                if type(hierarchy[index]) == str:
+                # Resolve nested element
+                if type(hierarchy[index]) == dict:
+                    element = self.resolve_nested(hierarchy[index], name)
+                else:
+                    element = hierarchy[index]
+
+                if element is None:
+                    next_state = enum.GetAttrStates.ERROR
+
+                elif type(element) == str:
                     for r in self.resources:
                         if r.name == hierarchy[index]:
                             resource = value = r
                             break
+
                     # Resource not found
                     if resource is None:
                         next_state = enum.GetAttrStates.ERROR
+
+                    # Resource does not have a dedicated YAML file
+                    elif resource.child is None:
+                        next_state = enum.GetAttrStates.RESOLVED
+
                     # Based on next element, choose next state
                     else:
                         index = index + 1
-                        if type(hierarchy[index]) == str:
+                        if index >= len(hierarchy):
+                            # No more elements found - TODO: is it invalid?
+                            next_state = enum.GetAttrStates.ERROR
+                            continue
+                        
+                        if type(hierarchy[index]) == dict:
+                            element = self.resolve_nested(hierarchy[index], name)
+                        else:
+                            element = hierarchy[index]
+                        
+                        if element is None:
+                            next_state = enum.GetAttrStates.ERROR
+                        elif type(element) == str:
                             # 'attributes'
                             if ((resource.grouptype == enum.Grouptypes.RG) and
-                                (hierarchy[index] == 'attributes')):
+                                (element == 'attributes')):
                                 index = index + 1
                                 next_state = enum.GetAttrStates.RG_ATTRIBUTES
                             
                             # 'outputs_list'
                             elif ((resource.grouptype == enum.Grouptypes.ASG) and
-                                  (hierarchy[index] == 'outputs_list')):
+                                  (element == 'outputs_list')):
                                 index = index + 1
                                 next_state = enum.GetAttrStates.ASG_OUTPUTS_LIST
                             # 'outputs'
                             elif ((resource.grouptype == enum.Grouptypes.ASG) and
-                                  (hierarchy[index] == 'outputs')):
+                                  (element == 'outputs')):
                                 index = index + 1
                                 next_state = enum.GetAttrStates.ASG_OUTPUTS
-                            elif hierarchy[index].startswith('resource.'):
-                                tmp = hierarchy[index].split('.')
+                            # 'resource.<name>', 'resource.<number>' or 'resource.<number>.<name>'
+                            elif element.startswith('resource.'):
+                                tmp = element.split('.')
                                 
                                 # resource.<number>.<ref> or resource.<number>
                                 if ((resource.grouptype == enum.Grouptypes.RG) and
                                     ((len(tmp) == 3) or (len(tmp) == 2)) and
                                     tmp[1].isdigit()):
+                                    element = tmp
                                     next_state = enum.GetAttrStates.RG_RESOURCE
+
                                 # resource.<name>
                                 elif (len(tmp) == 2):
+                                    element = tmp[1]
                                     next_state = enum.GetAttrStates.RESOURCE
 
                             # TODO: Add resource.<alphanumeric string>... for ASG
                             # output name
                             else:
                                 next_state = enum.GetAttrStates.OUTPUT_NAME
-
-                        elif type(hierarchy[index]) == dict:
-                            next_state = enum.GetAttrStates.ELE_NESTED_DICT
-                            
-
-                # Resource name is nested in another get_function
-                elif type(hierarchy[index]) == dict:
-                    next_state = enum.GetAttrStates.ELE_NESTED_DICT
-
-            elif cur_state == enum.GetAttrStates.OUTPUT_NAME:
-                if type(hierarchy[index]) == str:
-                    pass
-                    
-                elif type(hierarchy[index]) == dict:
-                    next_state = enum.GetAttrStates.ELE_NESTED_DICT
-
-            elif cur_state == enum.GetAttrStates.ELE_NESTED_DICT:
-                if len(hierarchy[index] == 1):
-                    nested_value = self.classify_items(hierarchy[index].keys()[0], 
-                            hierarchy[index].values()[0], name)
-                    if nested_value is None:
-                        # Nested element could not be resolved
-                        next_state = enum.GetAttrStates.ERROR
-                    else:
-                        # TODO: Connect it back to the flow
-                        # maybe set nested_value back to None, check it in parent state?
-                        pass
                 else:
-                    # Not a get_function format
+                    # element format can be only string
                     next_state = enum.GetAttrStates.ERROR
-            
-            # State transition
-            cur_state = next_state
+
+            # If second element is output name, resolve it
+            elif cur_state == enum.GetAttrStates.OUTPUT_NAME:
+                # Go through outputs section of resource file
+                found = False
+                for k, v in six.iteritems(resource.child.outputs):
+                    if element == k:
+                        value = v['value']
+                        found = True
+                        break
+                # Output name not found
+                if not found:
+                    next_state = enum.GetAttrStates.ERROR
+                else:
+                    index = index + 1
+                    next_state = enum.GetAttrStates.OUTPUT_VALUE
+
+            # Rest of hierarchy
+            elif cur_state == enum.GetAttrStates.OUTPUT_VALUE:
+                # End of hierarchy - now valid
+                if index >= len(hierarchy):
+                    next_state = enum.GetAttrStates.RESOLVED
+                    continue
+
+                # Resolve nested element
+                if type(hierarchy[index]) == dict:
+                    element = self.resolve_nested(hierarchy[index], name)
+                else:
+                    element = hierarchy[index]
+
+                if element is None:
+                    next_state = enum.GetAttrStates.ERROR
+
+                elif ((type(element) == str) and (type(value) == dict) and
+                      (element in value.keys())):
+                    value = value[element]
+
+                # Value is n-th element in list
+                elif ((type(element) == int) and (type(value) == list) and
+                      (element < len(value))):
+                    # TODO will it be parsed by YAML parser as int or str?
+                    value = value[element]
+
+                else:
+                    # element can only be string or digit
+                    next_state = enum.GetAttrStates.ERROR
+
+            # resource.<name>
+            elif cur_state == enum.GetAttrStates.RESOURCE:
+                found = False
+                for r in resource.child.resources:
+                    if element == r.name:
+                        value = r
+                        found = True
+                        break
+                # TODO: or can there be smth else?
+                if ((not found) or (len(hierarchy) > (index + 1))):
+                    next_state = enum.GetAttrStates.ERROR
+                else:
+                    next_state = enum.GetAttrStates.RESOLVED
+
+            # resource.<number>(.<output>)
+            elif cur_state == enum.GetAttrStates.RG_RESOURCE:
+                # TODO can there be something after this? Current assumption is 'no'.
+                if len(element) == 3:
+                    # TODO is the third part output or resource inside the resource?
+                    element = element[2]
+                    next_state = enum.GetAttrStates.OUTPUT_NAME
+                else:
+                    next_state = enum.GetAttrStates.RESOLVED
+
+            # 'attributes' or 'outputs'
+            elif cur_state in [enum.GetAttrStates.RG_ATTRIBUTES, enum.GetAttrStates.ASG_OUTPUTS]:
+                pass
+
+            # 'outputs_list'
+            elif cur_state == enum.GetAttrStates.ASG_OUTPUTS_LIST:
+                # Can it end here? Assumption - 'yes'
+                if index >= len(hierarchy):
+                    next_state = enum.GetAttrStates.RESOLVED
+                    continue
+
+                if type(hierarchy[index]) == dict:
+                    element = self.resolve_nested(hierarchy[index], name)
+                else:
+                    element = hierarchy[index]
+
+                if element is None:
+                    next_state = enum.GetAttrStates.ERROR
+                else:
+                    next_state = enum.GetAttrStates.OUTPUT_NAME
+                
+
+    def resolve_nested(self, nested_element, name):
+        ''' Checks format, tries to resolve element.
+            Returns its value upon success, None upon failure.
+            nested_element - dictionary
+            name - instance name
+        '''
+
+        if len(nested_element == 1):
+            # Resolve nested element
+            return self.classify_items(nested_element.keys()[0], 
+                    nested_element.values()[0], name)
+        else:
+            # Not a get_function format
+            return None
         
 
     def get_attr(self, hierarchy, name):
