@@ -140,6 +140,67 @@ class HotFile:
            return None
 
 
+    def get_param_FSM(self, hierarchy, name):
+        ''' Validates get_param
+            hierarchy - reference
+            name - instance name
+        '''
+
+        # main variables: cur_state, next_state, value
+        cur_state = enum.GetParamStates.INIT
+        next_state = enum.GetParamStates.INIT
+
+        parameter = None # Referenced parameter
+        value = None # Searched value
+
+        element = None # Value of current element (string)
+        index = 0 # Index of current element
+
+        while True:
+
+            # State transition
+            cur_state = next_state
+
+            # Initiate resolution
+            if cur_state == enum.GetParamStates.INIT:
+                if (type(hierarchy) == list) and (len(hierarchy) > 0):
+                    next_state = enum.GetAttrStates.PARAM_NAME
+                else:
+                    next_state = enum.GetAttrStates.ERROR
+
+            # End unsuccessfully
+            elif cur_state == enum.GetParamStates.ERROR:
+                if type(hierarchy) == list:
+                    self.invalid.append(hotclasses.InvalidReference(str(hierarchy[index]),
+                                name, enum.ErrorTypes.GET_PARAM, None))
+                else:
+                    self.invalid.append(hotclasses.InvalidReference(str(hierarchy),
+                                name, enum.ErrorTypes.GET_PARAM, None))
+                self.ok = False
+                return None
+
+            # End successfully
+            elif cur_state == enum.GetParamStates.RESOLVED:
+                parameter.used = True
+                return value
+
+            # Find parameter
+            elif cur_state == enum.GetParamStates.PARAM_NAME:
+                if type(hierarchy[index]) == dict:
+                    element = self.resolve_nested(hierarchy[index], name)
+                else:
+                    element = hierarchy[index]
+
+                if element is None:
+                    next_state = enum.GetParamStates.ERROR
+
+                elif type(element) == str:
+                    for p in self.params:
+                        if p.name == hierarchy[index]:
+                            parameter = value = p
+                            break
+                    
+
     def get_param(self, hierarchy, name):
         ''' Validates get_param
             hierarchy - reference
@@ -286,7 +347,7 @@ class HotFile:
         self.ok = False
         return None
 
-    def get_attr_f(self, hierarchy, name):
+    def get_attr_FSM(self, hierarchy, name):
         ''' Validates get_attr
             hierarchy - reference
             name - instance name
@@ -317,11 +378,11 @@ class HotFile:
             # End unsuccessfully, add invalid reference
             elif cur_state == enum.GetAttrStates.ERROR:
                 if type(hierarchy) == list:
-                    self.invalid.append(hotclasses.InvalidReference(hierarchy[index],
-                                name + ' - output of ' + hierarchy[0],
+                    self.invalid.append(hotclasses.InvalidReference(str(hierarchy[index]),
+                                name + ' - output of ' + str(hierarchy[0]),
                                 enum.ErrorTypes.GET_ATTR, None))
                 else:
-                    self.invalid.append(hotclasses.InvalidReference(hierarchy[index],
+                    self.invalid.append(hotclasses.InvalidReference(hierarchy,
                                 name + ' - output of ' + str(hierarchy),
                                 enum.ErrorTypes.GET_ATTR, None))
                 self.ok = False
@@ -427,11 +488,11 @@ class HotFile:
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     index = index + 1
-                    next_state = enum.GetAttrStates.OUTPUT_VALUE
+                    next_state = enum.GetAttrStates.OUTPUT_RESOLUTION
 
             # Rest of hierarchy
-            elif cur_state == enum.GetAttrStates.OUTPUT_VALUE:
-                # End of hierarchy - now valid
+            elif cur_state == enum.GetAttrStates.OUTPUT_RESOLUTION:
+                # End of hierarchy - now valid?
                 if index >= len(hierarchy):
                     next_state = enum.GetAttrStates.RESOLVED
                     continue
@@ -483,12 +544,12 @@ class HotFile:
                 else:
                     next_state = enum.GetAttrStates.RESOLVED
 
-            # 'attributes' or 'outputs'
-            elif cur_state in [enum.GetAttrStates.RG_ATTRIBUTES, enum.GetAttrStates.ASG_OUTPUTS]:
-                pass
-
-            # 'outputs_list'
-            elif cur_state == enum.GetAttrStates.ASG_OUTPUTS_LIST:
+            # 'attributes' or 'outputs' or 'outputs_list'
+            # TODO: are these cases for any input any different?
+            #       if not, make one case for all
+            elif (cur_state in [enum.GetAttrStates.RG_ATTRIBUTES,
+                                enum.GetAttrStates.ASG_OUTPUTS,
+                                enum.GetAttrStates.ASG_OUTPUTS_LIST]):
                 # Can it end here? Assumption - 'yes'
                 if index >= len(hierarchy):
                     next_state = enum.GetAttrStates.RESOLVED
@@ -512,7 +573,7 @@ class HotFile:
             name - instance name
         '''
 
-        if len(nested_element == 1):
+        if len(nested_element) == 1:
             # Resolve nested element
             return self.classify_items(nested_element.keys()[0], 
                     nested_element.values()[0], name)

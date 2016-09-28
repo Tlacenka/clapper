@@ -54,6 +54,16 @@ class GetAttrStates:
     RESOURCE = 7          # 'resource.<name>' used
 
     # Usual cases
-    RESOURCE_NAME = 8     # first element is a resource name
-    OUTPUT_NAME  = 9      # second element is an output name
-    OUTPUT_VALUE = 10     # remaining element(s) as string/dictionary/list
+    RESOURCE_NAME = 8      # first element is a resource name
+    OUTPUT_NAME  = 9       # second element is an output name
+    OUTPUT_RESOLUTION = 10 # remaining element(s) as string/dictionary/list
+
+class GetParamStates:
+    # Main states for initiating and ending FSM
+    INIT = 0
+    RESOLVED = 1
+    ERROR = 2
+
+    PARAM_NAME = 3         # first element is a parameter name
+    PARAM_VALUE = 4        # find its value for further resolution
+    PARAM_RESOLUTION = 5   # remaining element(s) as string/dictionary/list
