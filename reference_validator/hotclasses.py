@@ -38,6 +38,7 @@ class PropertyParameter:
         self.name = structure[0]    # name of parameter/property
         self.used = False           # flag of usage (reference)
         self.type = None            # parameter type
+        self.hidden = False         # hidden property (for passwords etc)
 
         self.value = (None if isPar else structure[1]) # value (possibly structured)
         self.default = None         # default value
@@ -47,6 +48,9 @@ class PropertyParameter:
 
         if isPar and ('default' in structure[1]):
             self.default = structure[1]['default']
+
+        if isPar and ('hidden' in structure[1]):
+            self.hidden = structure[1]['hidden']
 
     def merge(self, obj):
         ''' Merges 2 objects, uses attributes of the second object if they are defined.

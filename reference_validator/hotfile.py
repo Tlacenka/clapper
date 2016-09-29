@@ -188,14 +188,13 @@ class HotFile:
             elif cur_state == enum.GetParamStates.RESOLVED:
                 if parameter is not None:
                     parameter.used = True
-                return value
+                return (value if (value is not None) else element)
 
             # Find parameter
             elif cur_state == enum.GetParamStates.PARAM_NAME:
                 if type(hierarchy) == str:
                     # Resolve pseudo parameters
                     if hierarchy in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
-                        value = hierarchy # something that is not None
                         next_state = enum.GetParamStates.RESOLVED
                         continue
                     else:
@@ -207,21 +206,20 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
+                    print('error  PARAM_NAME 1')
                     next_state = enum.GetParamStates.ERROR
                     continue
 
                 elif type(element) == str:
                     for p in self.params:
                         if p.name == element:
-                            parameter = value = p
+                            parameter = p
                             break
 
                 if parameter is None:
                     # Parameter was not found
+                    print('error  PARAM_NAME 2')
                     next_state = enum.GetParamStates.ERROR
-                elif type(hierarchy) == str:
-                    # Parameter found, no hierarchy remaining
-                    next_state = enum.GetParamStates.RESOLVED
                 else:
                     # Go to parameter value resolution
                     next_state = enum.GetParamStates.PARAM_VALUE
@@ -252,15 +250,25 @@ class HotFile:
                 if value is None:
                     if parameter.default is not None:
                         value = parameter.default
+                    elif parameter.hidden:
+                        # Ignore hidden for now...TODO
+                        next_state = enum.GetParamStates.RESOLVED
+                        continue
                     else:
+                        print('error  PARAM_VALUE', parameter.value, tmp)
                         next_state = enum.GetParamStates.ERROR
                         continue
 
-                next_state = enum.GetParamStates.PARAM_RESOLUTION
-                index = index + 1
+                if type(hierarchy) == str:
+                    # Parameter found, no hierarchy remaining
+                    next_state = enum.GetParamStates.RESOLVED
+                else:
+                    next_state = enum.GetParamStates.PARAM_RESOLUTION
+                    index = index + 1
 
             # Resolve searched value based on hierarchy
             elif cur_state == enum.GetParamStates.PARAM_RESOLUTION:
+
                 # End of hierarchy
                 if index >= len(hierarchy):
                     next_state = enum.GetParamStates.RESOLVED
@@ -268,11 +276,13 @@ class HotFile:
 
                 # Resolve nested element
                 if type(hierarchy[index]) == dict:
+                    # TODO: can there be a get_ in default?
                     element = self.parent.resolve_nested(hierarchy[index], name)
                 else:
                     element = hierarchy[index]
 
                 if element is None:
+                    print('error  PARAM_RESOLUTION 1')
                     next_state = enum.GetParamStates.ERROR
 
                 elif ((type(element) == str) and (type(value) == dict) and
@@ -289,6 +299,7 @@ class HotFile:
 
                 else:
                     # element can only be string or digit
+                    print('error  PARAM_RESOLUTION 2', element, value)
                     next_state = enum.GetParamStates.ERROR
                 
 

@@ -680,6 +680,22 @@ class HotValidator:
                                 print('- ' + par.name)
                     print('')
 
+                # Print hidden parameters (optional)
+                if (self.print_unused) and [True for x in node.params if x.hidden]:
+                    if (self.pretty_format):
+                        print(enum.Colors.BOLD + 'Hidden parameters:' +
+                              enum.Colors.DEFAULT)
+                    else:
+                        print('Hidden parameters:')
+                    
+                    for par in node.params:
+                        if par.hidden:
+                            if self.pretty_format:
+                                print('- ' + enum.Colors.YELLOW + par.name + enum.Colors.DEFAULT)
+                            else:
+                                print('- ' + par.name)
+                    print('')
+                
                 # Print unused resources (optional)
                 if (self.print_unused) and [True for x in node.resources if not x.used]:
                     if (self.pretty_format):
