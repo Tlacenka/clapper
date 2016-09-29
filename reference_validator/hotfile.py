@@ -347,7 +347,7 @@ class HotFile:
         self.ok = False
         return None
 
-    def get_attr_FSM(self, hierarchy, name):
+    def get_attr(self, hierarchy, name):
         ''' Validates get_attr
             hierarchy - reference
             name - instance name
@@ -509,12 +509,14 @@ class HotFile:
                 elif ((type(element) == str) and (type(value) == dict) and
                       (element in value.keys())):
                     value = value[element]
+                    index = index + 1
 
                 # Value is n-th element in list
                 elif ((type(element) == int) and (type(value) == list) and
                       (element < len(value))):
                     # TODO will it be parsed by YAML parser as int or str?
                     value = value[element]
+                    index = index + 1
 
                 else:
                     # element can only be string or digit
@@ -580,238 +582,6 @@ class HotFile:
         else:
             # Not a get_function format
             return None
-        
-
-    def get_attr(self, hierarchy, name):
-        ''' Validates get_attr
-            hierarchy - reference
-            name - instance name
-        '''
-
-        error = None
-
-        if type(hierarchy) == list:
-
-            if len(hierarchy) < 2:
-                error = hierarchy[0]
-
-            # Root is a resource - find root
-            if error is None:
-                get_value = None
-                for r in self.resources:
-                    if r.name == hierarchy[0]:
-                        get_value = r
-                        break
-
-                if get_value is None:
-                    error = hierarchy[0]
-
-            cur_resource = get_value # for flagging usage
-
-            if error is None:
-                # Find output and its value
-
-                # If child node is not a yaml file, return non-None value
-                if get_value.child is None:
-                    cur_resource.used = True
-                    return get_value
-
-                # resource.<name> used
-                if hierarchy[1].startswith('resource.'):
-                    string = hierarchy[1].split('.')
-                    found = False
-                    if r.grouptype == '':
-                        for r in get_value.child.resources:
-                            if string[1] == r.name:
-                                get_value = r
-                                found = True
-                                break
-                    # TODO longer hierarchy
-                    elif r.grouptype == enum.Grouptypes.RG:
-                        for k, v in six.iteritems(get_value.child.outputs):
-                            if ((string[2] == k) and (type(v) == dict) and
-                                ('value' in v.keys())):
-                                get_value = v['value']
-                                found = True
-                                break
-
-                    if not found:
-                        error = hierarchy[1]
-                    else:
-                        cur_resource.used = True
-                        return get_value
-
-                 # TODO longer hierarchy
-                 # "attributes" returns in ResourceGroup { "server0" -> {"name": ..., "ip": ...}, "server1" -> {"name": ..., "ip": ...} }
-                 # - dictionary where keys are names of resources in that group, values are resource attributes
-                elif ((get_value.grouptype == enum.Grouptypes.RG) and
-                      (len(hierarchy) >= 3) and (hierarchy[1] == 'attributes')):
-                    for k, v in six.iteritems(get_value.child.outputs):
-                        if ((hierarchy[2] == k) and (type(v) == dict) and
-                                ('value' in v.keys())):
-                            get_value = v['value']
-                            found = True
-                            break
-
-                    if not found:
-                        error = hierarchy[1]
-                    else:
-                        cur_resource.used = True
-                        return get_value
-
-                # outputs_list used in case of autoscaling group TODO list?
-                elif ((get_value.grouptype == enum.Grouptypes.ASG) and
-                      (len(hierarchy) >= 3) and (hierarchy[1] == 'outputs_list')):
-                    print(get_value.name, get_value.hotfile.path)
-                    found = False
-                    for k, v in six.iteritems(get_value.child.outputs):
-                        if ((k == hierarchy[2]) and (type(v) is dict) and
-                            ('value' in v.keys())):
-                            cur_file = get_value.child
-                            get_value = v['value']
-                            found = True
-                            break
-
-                    if not found:
-                        error = hierarchy[1]
-                    else:
-                        # If the value is in get_, validate nested get_
-                        if ((type(get_value) is dict) and (len(get_value.keys()) == 1) and
-                            ('get_' in list(get_value.keys())[0])):
-                            get_value = cur_file.classify_items(
-                                list(get_value.keys())[0],
-                                list(get_value.values())[0], name)
-
-                            if get_value is None:
-                                error = hierarchy[1] # TODO tag nested
-
-                        # Validate rest of the hierarchy
-                        if error is None:
-                            for i in range(3, len(hierarchy)):
-                                if type(get_value) != dict:
-                                    error = hierarchy[i]
-                                    break
-
-                                # Nested get_
-                                if ((type(hierarchy[i]) == dict) and
-                                    ('get_' in list(hierarchy[i].keys())[0])):
-                                    nested_get_value = self.classify_items(
-                                        list(hierarchy[i].keys())[0],
-                                        list(hierarchy[i].values())[0], name)
-
-                                    if ((nested_get_value is None) or
-                                        (type(nested_get_value) != str) or
-                                        (nested_get_value not in get_value.keys())):
-                                        error = 'nested ' + list(hierarchy[i].keys())[0]
-                                        break
-                                    else:
-                                        get_value = get_value[nested_get_value]
-
-                                elif ((type(hierarchy[i]) == str) and
-                                      (hierarchy[i] in get_value.keys())):
-                                    get_value = get_value[value[i]]
-                                else:
-                                    if type(hierarchy[i]) == str:
-                                        error = hierarchy[i]
-                                    else:
-                                        error = 'nested ' + list(hierarchy[i].keys())[0] + ' - ' + list(hierarchy[i].values()[0])[0]
-                                    break
-
-                        if error is None:
-                            cur_resource.used = True
-                            return get_value
-
-                # normally mapped to outputs section
-                # TODO remove duplicate sections from outputs_list and outputs
-                else:
-                    # Find output
-                    found = False
-                    for k, v in six.iteritems(get_value.child.outputs):
-                        if hierarchy[1] == k:
-                            cur_file = get_value.child
-                            get_value = v
-                            found = True
-                            break
-                    if not found:
-                        error = hierarchy[1]
-                    if error is None:
-                        # Go to value section of the output
-                        if ((type(get_value) == dict) and
-                            ('value' in get_value.keys())):
-                            get_value = get_value['value']
-                        else:
-                            error = hierarchy[1]
-
-                    # Value can be dictionary or string
-                    if error is None:
-                        if type(get_value) == dict:
-                            # str_replace or list_join
-                            if (('str_replace' in get_value.keys()) or
-                                (('list_join') in get_value.keys())):
-                                pass
-
-                            # get_
-                            elif ((len(get_value.keys()) == 1) and
-                                  ('get_' in list(get_value.keys())[0])):
-                                  get_value = cur_file.classify_items(
-                                      list(get_value.keys())[0],
-                                      list(get_value.values())[0], name)
-
-                                  if get_value is None:
-                                      error = hierarchy[1]
-
-                            # else - structured value
-                        elif type(get_value) != str:
-                            error = hierarchy[1]
-
-                    if error is None:
-                        # Get subvalues of value from other elements of the get_attr list
-                        for i in range(2, len(hierarchy)):
-                            if type(get_value) != dict:
-                                error = hierarchy[i]
-                                break
-
-                            # Nested get_
-                            if ((type(hierarchy[i]) == dict) and
-                                ('get_' in list(hierarchy[i].keys())[0])):
-                                nested_get_value = self.classify_items(
-                                    list(hierarchy[i].keys())[0],
-                                    list(hierarchy[i].values())[0], name)
-
-                                if ((nested_get_value is None) or
-                                    (type(nested_get_value) != str) or
-                                    (nested_get_value not in get_value.keys())):
-                                    error = 'nested ' + list(hierarchy[i].keys())[0]
-                                    break
-                                else:
-                                    get_value = get_value[nested_get_value]
-
-                            elif ((type(hierarchy[i]) == str) and
-                                  (hierarchy[i] in get_value.keys())):
-                                get_value = get_value[hierarchy[i]]
-                            else:
-                                if type(hierarchy[i]) == str:
-                                    error = hierarchy[i]
-                                else:
-                                    error = 'nested ' + list(hierarchy[i].keys())[0] + ' - ' + list(hierarchy[i].values()[0])[0]
-                                break
-
-
-        # Is there any other format of get_attr than a list?
-        else:
-            error = 'type of get_attr value is ' + type(hierarchy)
-
-        # Return value or None
-        if error is None:
-            cur_resource.used = True
-            return get_value
-        else:
-            self.invalid.append(hotclasses.InvalidReference(error,
-                                name + ' - output of ' + hierarchy[0],
-                                enum.ErrorTypes.GET_ATTR, None))
-            self.ok = False
-            return None
-
 
     def check_prop_par(self, parent, resource, environments):
         ''' Check properties against parameters and vice versa, tag used. '''
