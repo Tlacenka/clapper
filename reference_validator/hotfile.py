@@ -6,6 +6,7 @@
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
+
 from __future__ import with_statement, print_function
 
 import os
@@ -15,6 +16,7 @@ import yaml # pip install pyyaml
 
 import enum
 import hotclasses
+
 
 class HotFile:
     ''' Class with attributes needed for work with HOT files. '''
@@ -109,6 +111,7 @@ class HotFile:
         # Remove node from current nodes after validation
         curr_nodes.remove(self)
 
+
     def validate_instances(self, name, structure):
         ''' Check if all references to variables are valid.
             name       - name of referring instance
@@ -127,11 +130,12 @@ class HotFile:
                 if self.classify_items(key, value, name) is None:
                     self.validate_instances(name, value)
 
+
     def classify_items(self, key, value, name):
        ''' If item contains reference, it is processed. '''
 
        if key == 'get_param':
-           return self.get_param(value, name)
+           return self.get_param_FSM(value, name)
        elif key == 'get_resource':
            return self.get_resource(value, name)
        elif key == 'get_attr':
@@ -146,15 +150,15 @@ class HotFile:
             name - instance name
         '''
 
-        # main variables: cur_state, next_state, value
+        # main variables: cur_state, next_state
         cur_state = enum.GetParamStates.INIT
         next_state = enum.GetParamStates.INIT
 
-        parameter = None # Referenced parameter
-        value = None # Searched value
+        parameter = None # referenced parameter
+        value = None     # searched value
 
-        element = None # Value of current element (string)
-        index = 0 # Index of current element
+        element = None   # value of current element (string)
+        index = 0        # index of current element
 
         while True:
 
@@ -163,10 +167,11 @@ class HotFile:
 
             # Initiate resolution
             if cur_state == enum.GetParamStates.INIT:
-                if (type(hierarchy) == list) and (len(hierarchy) > 0):
-                    next_state = enum.GetAttrStates.PARAM_NAME
+                if ((type(hierarchy) == str) or
+                    ((type(hierarchy) == list) and (len(hierarchy) > 0))):
+                    next_state = enum.GetParamStates.PARAM_NAME
                 else:
-                    next_state = enum.GetAttrStates.ERROR
+                    next_state = enum.GetParamStates.ERROR
 
             # End unsuccessfully
             elif cur_state == enum.GetParamStates.ERROR:
@@ -181,25 +186,112 @@ class HotFile:
 
             # End successfully
             elif cur_state == enum.GetParamStates.RESOLVED:
-                parameter.used = True
+                if parameter is not None:
+                    parameter.used = True
                 return value
 
             # Find parameter
             elif cur_state == enum.GetParamStates.PARAM_NAME:
-                if type(hierarchy[index]) == dict:
+                if type(hierarchy) == str:
+                    # Resolve pseudo parameters
+                    if hierarchy in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
+                        value = hierarchy # something that is not None
+                        next_state = enum.GetParamStates.RESOLVED
+                        continue
+                    else:
+                        element = hierarchy
+
+                elif type(hierarchy[index]) == dict:
                     element = self.resolve_nested(hierarchy[index], name)
                 else:
                     element = hierarchy[index]
 
                 if element is None:
                     next_state = enum.GetParamStates.ERROR
+                    continue
 
                 elif type(element) == str:
                     for p in self.params:
-                        if p.name == hierarchy[index]:
+                        if p.name == element:
                             parameter = value = p
                             break
-                    
+
+                if parameter is None:
+                    # Parameter was not found
+                    next_state = enum.GetParamStates.ERROR
+                elif type(hierarchy) == str:
+                    # Parameter found, no hierarchy remaining
+                    next_state = enum.GetParamStates.RESOLVED
+                else:
+                    # Go to parameter value resolution
+                    next_state = enum.GetParamStates.PARAM_VALUE
+
+            # Find its value based on property/parameter value/default
+            elif cur_state == enum.GetParamStates.PARAM_VALUE:
+
+                # Try finding direct value
+                tmp = None
+
+                # If property has a get_ value and has a parent
+                # TODO: better solution? because sometimes, the value can be a dict
+                if ((type(parameter.value) == dict) and (len(parameter.value) == 1) and
+                    ('get_' in parameter.value.keys()[0])):
+                    if isinstance(self.parent, HotFile):
+                        tmp = self.parent.resolve_nested(parameter.value, name)
+                    else:
+                        # parent is not a yaml file > cannot be traced
+                        # TODO: assumption - it is 'ok'
+                        next_state = enum.GetParamStates.RESOLVED
+                        continue
+                else:
+                    tmp = parameter.value
+
+                value = tmp
+
+                # Check parameter default if the value is not found
+                if value is None:
+                    if parameter.default is not None:
+                        value = parameter.default
+                    else:
+                        next_state = enum.GetParamStates.ERROR
+                        continue
+
+                next_state = enum.GetParamStates.PARAM_RESOLUTION
+                index = index + 1
+
+            # Resolve searched value based on hierarchy
+            elif cur_state == enum.GetParamStates.PARAM_RESOLUTION:
+                # End of hierarchy
+                if index >= len(hierarchy):
+                    next_state = enum.GetParamStates.RESOLVED
+                    continue
+
+                # Resolve nested element
+                if type(hierarchy[index]) == dict:
+                    element = self.parent.resolve_nested(hierarchy[index], name)
+                else:
+                    element = hierarchy[index]
+
+                if element is None:
+                    next_state = enum.GetParamStates.ERROR
+
+                elif ((type(element) == str) and (type(value) == dict) and
+                      (element in value.keys())):
+                    value = value[element]
+                    index = index + 1
+
+                # Value is n-th element in list
+                elif ((type(element) == int) and (type(value) == list) and
+                      (element < len(value))):
+                    # TODO will it be parsed by YAML parser as int or str?
+                    value = value[element]
+                    index = index + 1
+
+                else:
+                    # element can only be string or digit
+                    next_state = enum.GetParamStates.ERROR
+                
+
 
     def get_param(self, hierarchy, name):
         ''' Validates get_param
@@ -346,6 +438,7 @@ class HotFile:
                             enum.ErrorTypes.GET_RESOURCE, None))
         self.ok = False
         return None
+
 
     def get_attr(self, hierarchy, name):
         ''' Validates get_attr
@@ -583,6 +676,7 @@ class HotFile:
             # Not a get_function format
             return None
 
+
     def check_prop_par(self, parent, resource, environments):
         ''' Check properties against parameters and vice versa, tag used. '''
 
@@ -624,6 +718,7 @@ class HotFile:
                 if self.params[par].name == prop.name:
                     prop.merge(self.params[par])
                     self.params[par] = prop
+
 
     def depends_on(self):
         ''' Sets resources which other resources depend on as used '''
