@@ -43,14 +43,28 @@ class PropertyParameter:
         self.value = (None if isPar else structure[1]) # value (possibly structured)
         self.default = None         # default value
 
-        if isPar and ('type' in structure[1]):
+        if isPar and (structure[1] is not None) and ('type' in structure[1]):
             self.type = structure[1]['type']
 
-        if isPar and ('default' in structure[1]):
+        if isPar and (structure[1] is not None) and ('default' in structure[1]):
             self.default = structure[1]['default']
 
-        if isPar and ('hidden' in structure[1]):
+        if isPar and (structure[1] is not None) and ('hidden' in structure[1]):
             self.hidden = structure[1]['hidden']
+
+    def clone(self):
+        ''' Creates a deep copy of the object,
+            mutable objects such as structure are shared
+        '''
+        new_propar = PropertyParameter((self.name, None), True)
+
+        # Copies all values to the clone
+        new_propar.type = self.type
+        new_propar.hidden = self.hidden
+        new_propar.value = self.value
+        new_propar.default = self.default
+
+        return new_propar
 
     def merge(self, obj):
         ''' Merges 2 objects, uses attributes of the second object if they are defined.
@@ -112,6 +126,12 @@ class Resource:
                 for prop in self.structure['properties'].items():
                     self.properties.append(PropertyParameter(prop, False))
 
+    def clone(self):
+        ''' Creates a new deep copy of the object,
+            mutable objects such as structure are shared
+        '''
+        new_resource = Resource(self.name, self.structure, self.hotfile)
+        return new_resource
 
 class InvalidReference:
     ''' Saves all invalid references for output. In HotFile. '''

@@ -208,7 +208,30 @@ class HotValidator:
 
                     # If parameter does not exist in the root template
                     if not found:
-                        self.templates[0].invalid.append(hotclasses.InvalidReference(key, env.path, enum.ErrorTypes.GET_PARAM, None))
+                        self.templates[0].invalid.append(hotclasses.InvalidReference(key,
+                             env.path, enum.ErrorTypes.GET_PARAM, None))
+
+    def find_mapping(self, mapping):
+        ''' Searches if there is a mapping with passed side available.
+            mapping - left side of mapping
+            returns first found right side of the mapping if found or None
+        '''
+
+        for env in self.environments:
+            for origin, mapped in six.iteritems(env.resource_registry):
+                if origin == mapping:
+                    return (mapped, env)
+        return None
+
+    #def map_2search(self, root):
+        #''' Go through mappings, apply to templates using DFS'''
+        #for env in self.environments:
+            #for origin, mapped in six.iteritems(env.resource_registry):
+                #for r in root.resources:
+                    #self.map_2apply(r, origin, mapped)
+    # TODO: go through the template tree, try to apply wildcard mapping
+        #       and direct mapping after that, create clone mappings
+        #       on the way
 
     def apply_mappings(self):
         ''' Add all files mapped to resources as children in parent node. '''
@@ -255,6 +278,9 @@ class HotValidator:
             for hot in self.templates + self.mappings:
                 for r in hot.resources:
 
+                    if r.child is not None:
+                        continue
+
                     # Finds mapped file if the mapping is designated for the resource
                     if ((r.type == origin) and
                         ((type(mapped) == str) or (mapped[1] == r.name))):
@@ -263,18 +289,24 @@ class HotValidator:
                         for m in self.mappings:
 
                             # Other nonYAML type
-                            if not mapped.endswith('.yaml'):
+                            if (type(mapped) == str) and (not mapped.endswith('.yaml')):
                                 r.type = mapped
                                 found = True
 
                             # YAML mapping
+                            # TODO: create mapping clones for mappings applied multiple times!
                             elif (((type(mapped) == str) and (m.path == mapped)) or
-                                ((type(mapped) == list) and (m.path == mapped[0]))
-                                and (m.parent == env)):
+                                ((type(mapped) == list) and (m.path == mapped[0]))):
+                                # If it is already mapped somewhere, create a clone
+                                if m.parent != env:
+                                    self.mappings.append(m.clone_file(r.hotfile))
+                                    r.child = self.mappings[-1]
+                                else:
+                                    m.parent = r.hotfile
+                                    r.child = m
                                 r.type = mapped
-                                r.child = m
-                                m.parent = r.hotfile
                                 found = True
+                                break
 
             if found:
                 ret = self.find_mapping(mapped)
@@ -282,19 +314,6 @@ class HotValidator:
                     # If yes, apply mappings (might be that this mapping
                     # has already been realized in apply_mappings)
                     self.map_resources(mapped, ret[0], ret[1]) 
-
-
-    def find_mapping(self, mapping):
-        ''' Searches if there is a mapping with passed side available.
-            mapping - left side of mapping
-            returns first found right side of the mapping if found or None
-        '''
-
-        for env in self.environments:
-            for origin, mapped in six.iteritems(env.resource_registry):
-                if origin == mapping:
-                    return (mapped, env)
-        return None
 
 
     def validate_env_params(self):
@@ -561,6 +580,7 @@ class HotValidator:
 
 
         # HOT Files and mappings
+        # TODO: Print as DFS, rather going through the tree instead of the list
         for hot in [x for x in [self.templates, self.mappings] if len(x)]:
             if self.pretty_format:
                 print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
@@ -591,10 +611,12 @@ class HotValidator:
                     print(enum.Colors.BOLD + 'Parent: ' + enum.Colors.DEFAULT +
                           (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 else:
-                    print('Parent: ' + (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
+                    print('Parent: ' + (os.path.relpath(node.parent.path,
+                          self.init_dir) if (node.parent is not None) else 'None (root)'))
                 print('')
 
                 # Invalid references
+                # TODO: optimize so that no error has two invalid records (esp. in case of nested)
                 if node.invalid:
                     if self.pretty_format:
                         print(enum.Colors.BOLD + 'Invalid references:' + enum.Colors.DEFAULT)
@@ -623,7 +645,7 @@ class HotValidator:
                                        ' is not declared.')
 
                         # get_attr
-                        elif ref.type == enum.ErrorTypes.GET_ATTR:
+                        elif (ref.type == enum.ErrorTypes.GET_ATTR):
                             if self.pretty_format:
                                 print ('Instance ' + enum.Colors.YELLOW + ref.referent +
                                        enum.Colors.DEFAULT + ' referred by ' + enum.Colors.YELLOW +

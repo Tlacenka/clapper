@@ -40,6 +40,25 @@ class HotFile:
         self.invalid = []           # list of invalid references (Reference)
 
 
+    def clone_file(self, new_parent):
+        ''' Clones file, optionally adds new parent straight away,
+            mutable objects such as structure are shared
+        '''
+        new_file = HotFile(new_parent, self.path)
+
+        # create new instances of property/parameter objects
+        for r in self.resources:
+            new_file.resources.append(r.clone())
+
+        for p in self.params:
+            new_file.params.append(p.clone())
+
+        new_file.outputs = self.outputs # outputs section remains
+        new_file.structure = self.structure # the file structure remains
+        # ok and invalid do not need to be changed
+
+        return new_file
+
     def load_file(self, curr_nodes, templates, environments, curr_path):
         ''' Validates YAML file. '''
 
@@ -135,7 +154,7 @@ class HotFile:
        ''' If item contains reference, it is processed. '''
 
        if key == 'get_param':
-           return self.get_param_FSM(value, name)
+           return self.get_param(value, name)
        elif key == 'get_resource':
            return self.get_resource(value, name)
        elif key == 'get_attr':
@@ -144,7 +163,7 @@ class HotFile:
            return None
 
 
-    def get_param_FSM(self, hierarchy, name):
+    def get_param(self, hierarchy, name):
         ''' Validates get_param
             hierarchy - reference
             name - instance name
@@ -231,14 +250,12 @@ class HotFile:
                 tmp = None
 
                 # If property has a get_ value and has a parent
-                # TODO: better solution? because sometimes, the value can be a dict
                 if ((type(parameter.value) == dict) and (len(parameter.value) == 1) and
                     ('get_' in parameter.value.keys()[0])):
                     if isinstance(self.parent, HotFile):
                         tmp = self.parent.resolve_nested(parameter.value, name)
                     else:
                         # parent is not a yaml file > cannot be traced
-                        # TODO: assumption - it is 'ok'
                         next_state = enum.GetParamStates.RESOLVED
                         continue
                 else:
@@ -255,7 +272,6 @@ class HotFile:
                         next_state = enum.GetParamStates.RESOLVED
                         continue
                     else:
-                        print('error  PARAM_VALUE', parameter.value, tmp)
                         next_state = enum.GetParamStates.ERROR
                         continue
 
@@ -282,7 +298,6 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
-                    print('error  PARAM_RESOLUTION 1')
                     next_state = enum.GetParamStates.ERROR
 
                 elif ((type(element) == str) and (type(value) == dict) and
@@ -299,138 +314,7 @@ class HotFile:
 
                 else:
                     # element can only be string or digit
-                    print('error  PARAM_RESOLUTION 2', element, value)
                     next_state = enum.GetParamStates.ERROR
-                
-
-
-    def get_param(self, hierarchy, name):
-        ''' Validates get_param
-            hierarchy - reference
-            name - instance name
-        '''
-        if type(hierarchy) == list:
-
-            error = None
-
-            # Get root - parameter and its structure
-            parameter = None
-            for p in self.params:
-                if p.name == hierarchy[0]:
-                    parameter = p
-            if parameter is None:
-                error = hierarchy[0]
-
-            # Get its value
-            if error is None:
-
-                # Try validating based on property
-                get_value = None
-                if parameter.value is not None:
-
-                    get_value = parameter.value
-
-                    # If property value is referenced by get_
-                    if ((type(parameter.value) == dict) and
-                        (len(get_value.items()) == 1) and
-                        ('get_' in list(get_value.keys())[0])):
-
-                            # Checks if parent file content is available
-                            if isinstance(self.parent, HotFile):
-                                get_value = self.parent.classify_items(
-                                    list(get_value.keys())[0],
-                                    list(get_value.values())[0], name)
-                            # If not?
-                            else:
-                                pass
-
-                            if get_value is None:
-                                error = hierarchy[0]
-
-                # Validate based on parameter only
-                else:
-                    if parameter.default is not None:
-                        get_value = parameter.default
-                    else:
-                        error = hierarchy[0]
-
-            # Get value of the rest of the hierarchy
-            if error is None:
-               for i in range(1, len(hierarchy)):
-                   if type(hierarchy[i]) == str:
-                       # TODO points to smth in a group, check if it is a group
-                       if hierarchy[i].isdigit():
-                           pass
-                       else:
-                           # Try finding value of key in current structure
-                           if type(get_value) is not dict:
-                              error = hierarchy[i]
-                              break
-
-                           else:
-                               found = False
-                               for k, v in six.iteritems(get_value):
-                                   if k == hierarchy[i]:
-                                       get_value = v
-                                       found = True
-                                       break
-
-                               if not found:
-                                  error = hierarchy[i]
-                                  break
-
-                   elif type(hierarchy[i]) == int: # in case of a list, which position
-                       pass
-
-                   elif type(hierarchy[i]) == dict: # nested get_
-                       kv = hierarchy[i].items()[0]
-
-                       if type(self.parent) == HotFile:
-                          get_value = self.parent.classify_items(kv[0], kv[1], name)
-                          if get_value is None:
-                             error = hierarchy[i]
-                   else:
-                       error = hierarchy[i]
-
-            if error is not None:
-                # Add it to invalid references
-                self.invalid.append(hotclasses.InvalidReference(hierarchy[1], name,
-                                    enum.ErrorTypes.GET_PARAM, None))
-                self.ok = False
-                return None
-
-            else:
-               # Change usage flag
-               par = [x for x in self.params if x.name == hierarchy[0]][0]
-               if (par is not None) and (par.used == False):
-                   par.used = True
-
-               # Return reference value
-               return get_value
-
-        elif type(hierarchy) == str:
-            # Check if it is a pseudoparameter
-            if hierarchy not in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
-                if hierarchy not in [x.name for x in self.params]:
-                    # Add it to invalid references
-                    self.invalid.append(hotclasses.InvalidReference(hierarchy, name,
-                                         enum.ErrorTypes.GET_PARAM, None))
-                    self.ok = False
-                    return None
-
-                else:
-                    # Changes usage flag
-                    par = [x for x in self.params if x.name == hierarchy][0]
-                    if par.used == False:
-                        par.used = True
-                    # Returns parameter value or default value
-                    return (par.value if par.value is not None else par.default)
-        else:
-             # Add it to invalid references
-             self.invalid.append(hotclasses.InvalidReference(hierarchy, name,
-                                 enum.ErrorTypes.GET_PARAM, None))
-             self.ok = False
-             return None
 
 
     def get_resource(self, hierarchy, name):
@@ -477,6 +361,7 @@ class HotFile:
                 if (type(hierarchy) == list) and (len(hierarchy) > 1):
                     next_state = enum.GetAttrStates.RESOURCE_NAME
                 else:
+                    print('ERROR INIT')
                     next_state = enum.GetAttrStates.ERROR
 
             # End unsuccessfully, add invalid reference
@@ -489,6 +374,7 @@ class HotFile:
                     self.invalid.append(hotclasses.InvalidReference(hierarchy,
                                 name + ' - output of ' + str(hierarchy),
                                 enum.ErrorTypes.GET_ATTR, None))
+                print (self.path, hierarchy)
                 self.ok = False
                 return None
 
@@ -506,16 +392,18 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
+                    print('ERROR RESOURCE_NAME 1')
                     next_state = enum.GetAttrStates.ERROR
 
                 elif type(element) == str:
                     for r in self.resources:
-                        if r.name == hierarchy[index]:
+                        if r.name == element:
                             resource = value = r
                             break
 
                     # Resource not found
                     if resource is None:
+                        print('ERROR RESOURCE_NAME 2', element)
                         next_state = enum.GetAttrStates.ERROR
 
                     # Resource does not have a dedicated YAML file
@@ -527,6 +415,7 @@ class HotFile:
                         index = index + 1
                         if index >= len(hierarchy):
                             # No more elements found - TODO: is it invalid?
+                            print('ERROR RESOURCE_NAME 3')
                             next_state = enum.GetAttrStates.ERROR
                             continue
                         
@@ -536,6 +425,7 @@ class HotFile:
                             element = hierarchy[index]
                         
                         if element is None:
+                            print('ERROR RESOURCE_NAME 4')
                             next_state = enum.GetAttrStates.ERROR
                         elif type(element) == str:
                             # 'attributes'
@@ -576,6 +466,7 @@ class HotFile:
                                 next_state = enum.GetAttrStates.OUTPUT_NAME
                 else:
                     # element format can be only string
+                    print('ERROR RESOURCE_NAME 5')
                     next_state = enum.GetAttrStates.ERROR
 
             # If second element is output name, resolve it
@@ -589,6 +480,7 @@ class HotFile:
                         break
                 # Output name not found
                 if not found:
+                    print('ERROR OUTPUT_NAME')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     index = index + 1
@@ -608,6 +500,7 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
+                    print('ERROR OUTPUT_RESOLUTION 1')
                     next_state = enum.GetAttrStates.ERROR
 
                 elif ((type(element) == str) and (type(value) == dict) and
@@ -624,6 +517,7 @@ class HotFile:
 
                 else:
                     # element can only be string or digit
+                    print('ERROR OUTPUT_RESOLUTION 2')
                     next_state = enum.GetAttrStates.ERROR
 
             # resource.<name>
@@ -636,6 +530,7 @@ class HotFile:
                         break
                 # TODO: or can there be smth else?
                 if ((not found) or (len(hierarchy) > (index + 1))):
+                    print('ERROR RESOURCE')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     next_state = enum.GetAttrStates.RESOLVED
@@ -667,6 +562,7 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
+                    print('ERROR RG/ARG stuff')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     next_state = enum.GetAttrStates.OUTPUT_NAME
