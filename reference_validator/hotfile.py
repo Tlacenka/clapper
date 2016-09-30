@@ -225,7 +225,6 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
-                    print('error  PARAM_NAME 1')
                     next_state = enum.GetParamStates.ERROR
                     continue
 
@@ -237,7 +236,6 @@ class HotFile:
 
                 if parameter is None:
                     # Parameter was not found
-                    print('error  PARAM_NAME 2')
                     next_state = enum.GetParamStates.ERROR
                 else:
                     # Go to parameter value resolution
@@ -361,7 +359,6 @@ class HotFile:
                 if (type(hierarchy) == list) and (len(hierarchy) > 1):
                     next_state = enum.GetAttrStates.RESOURCE_NAME
                 else:
-                    print('ERROR INIT')
                     next_state = enum.GetAttrStates.ERROR
 
             # End unsuccessfully, add invalid reference
@@ -392,7 +389,6 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
-                    print('ERROR RESOURCE_NAME 1')
                     next_state = enum.GetAttrStates.ERROR
 
                 elif type(element) == str:
@@ -403,7 +399,6 @@ class HotFile:
 
                     # Resource not found
                     if resource is None:
-                        print('ERROR RESOURCE_NAME 2', element)
                         next_state = enum.GetAttrStates.ERROR
 
                     # Resource does not have a dedicated YAML file
@@ -415,7 +410,6 @@ class HotFile:
                         index = index + 1
                         if index >= len(hierarchy):
                             # No more elements found - TODO: is it invalid?
-                            print('ERROR RESOURCE_NAME 3')
                             next_state = enum.GetAttrStates.ERROR
                             continue
                         
@@ -425,7 +419,6 @@ class HotFile:
                             element = hierarchy[index]
                         
                         if element is None:
-                            print('ERROR RESOURCE_NAME 4')
                             next_state = enum.GetAttrStates.ERROR
                         elif type(element) == str:
                             # 'attributes'
@@ -466,7 +459,6 @@ class HotFile:
                                 next_state = enum.GetAttrStates.OUTPUT_NAME
                 else:
                     # element format can be only string
-                    print('ERROR RESOURCE_NAME 5')
                     next_state = enum.GetAttrStates.ERROR
 
             # If second element is output name, resolve it
@@ -480,7 +472,6 @@ class HotFile:
                         break
                 # Output name not found
                 if not found:
-                    print('ERROR OUTPUT_NAME')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     index = index + 1
@@ -500,7 +491,6 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
-                    print('ERROR OUTPUT_RESOLUTION 1')
                     next_state = enum.GetAttrStates.ERROR
 
                 elif ((type(element) == str) and (type(value) == dict) and
@@ -517,7 +507,6 @@ class HotFile:
 
                 else:
                     # element can only be string or digit
-                    print('ERROR OUTPUT_RESOLUTION 2')
                     next_state = enum.GetAttrStates.ERROR
 
             # resource.<name>
@@ -530,7 +519,6 @@ class HotFile:
                         break
                 # TODO: or can there be smth else?
                 if ((not found) or (len(hierarchy) > (index + 1))):
-                    print('ERROR RESOURCE')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     next_state = enum.GetAttrStates.RESOLVED
@@ -562,7 +550,6 @@ class HotFile:
                     element = hierarchy[index]
 
                 if element is None:
-                    print('ERROR RG/ARG stuff')
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     next_state = enum.GetAttrStates.OUTPUT_NAME

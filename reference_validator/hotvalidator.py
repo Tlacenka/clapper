@@ -645,7 +645,7 @@ class HotValidator:
                                        ' is not declared.')
 
                         # get_attr
-                        elif (ref.type == enum.ErrorTypes.GET_ATTR):
+                        elif ref.type == enum.ErrorTypes.GET_ATTR:
                             if self.pretty_format:
                                 print ('Instance ' + enum.Colors.YELLOW + ref.referent +
                                        enum.Colors.DEFAULT + ' referred by ' + enum.Colors.YELLOW +
