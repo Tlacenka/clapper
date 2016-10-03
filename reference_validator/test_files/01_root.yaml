@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# File: 01_root.yaml
+# Brief: Test nr. 1 - Parsing correct YAML file
+
+section1:
+
+  # A few examples
+  Instance1:
+    description: Example 1.
+    type: string
+  Instance2:
+    default: {}
+    description: Example 2.
+    type: json
+
+section2:
+  Instance3:
+    type: boolean
+    properties:
+      - property1: value1
+      - property2: value2
+      - property3: value3

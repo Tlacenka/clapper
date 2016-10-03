@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# File: 04_root.yaml
+# Brief: Test nr. 4 - Parsing valid HOT
+#        Instance structure is missing
+
+heat_template_version:
+
+description:
+
+parameters:
+  parameter1:
+
+parameter_groups:
+  label:
+  description:
+  parameters:
+
+resources:
+  resource1:
+
+outputs:
+  output1:
+
+conditions:

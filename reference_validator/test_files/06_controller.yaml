@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# File: 06_controller.yaml
+# Brief: Test nr. 6 - Basic HOT Resolution
+
+parameters:
+
+  # Parameters with matching property
+  ControllerPassword:
+    description: Controller password
+    type: string
+  CinderPassword:
+    description: Cinder password
+    type: string
+  GlancePassword:
+    description: Glance password
+  HeatPassword:
+    description: Heat password
+  Image:
+    description: Glance image
+  KeyName:
+    description: Key name
+  NovaPassword:
+    description: Nova password
+  SwiftPassword:
+    description: Swift password
+  #PublicVirtualIP: {get_attr: [VipMap, net_ip_map, external]}
+  ServiceNetMap:
+    description: Service map
+  #EndpointMap: {get_attr: [EndpointMap, endpoint_map]}
+  #CeilometerApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, CeilometerApiNetwork]}]}
+  #CinderApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, CinderApiNetwork]}]}
+  #HeatApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, HeatApiNetwork]}]}
+  #GlanceApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
+  #NovaApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+  #SwiftProxyVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, SwiftProxyNetwork]}]}
+  #KeystoneAdminApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystoneAdminApiNetwork]}]}
+  #KeystonePublicApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
+  #NeutronApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NeutronApiNetwork]}]}
+  #NovaApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+  Hostname:
+    description: hostname
+    type: string
+
+  # Additional parameters
+  Flavor:
+    description: image flavor
+    default: baremetal
+
+resources:
+
+  Controller:
+    type: OS::TripleO::Server
+    properties:
+      image: {get_param: Image}
+      flavor: {get_param: Flavor}
+      key_name: {get_param: KeyName}
+
+outputs:
+  # Output value given directly
+  ip_address:
+    description: IP address
+    value:
+      IPv4: '127.0.0.1'
+      IPv6: '::1'
+
+  # Output value given by get_
+  server_resource:
+    description: Resource handler
+    value:
+      {get_resource: Controller}

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# File: 03_root.yaml
+# Brief: Test nr. 3 - Parsing valid HOT
+#        Section structure is missing
+
+parameters:
+
+resource_registry:
+
+parameter_defaults:
+
+encrypted_parameters:
+
+event_sinks:
+
+parameter_merge_strategies:

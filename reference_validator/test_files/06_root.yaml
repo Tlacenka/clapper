@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# File: 06_root.yaml
+# Brief: Test nr. 6 - Basic HOT Resolution
+
+parameters:
+  # Values added via environment
+  ControllerPassword:
+    description: Controller password
+  CinderPassword:
+    description: Cinder password
+  GlancePassword:
+    description: Glance password
+  HeatPassword:
+    description: Heat password
+  NovaPassword:
+    description: Nova password
+  SwiftPassword:
+    description: Swift Password
+
+  # Value added via environment parameter_defaults
+  Hostname:
+    description: hostname
+
+  # Value determined by resource/default
+  ControllerHostnameFormat:
+    type: string
+    description: Format for Controller node hostnames
+    default: '%stackname%-controller-%index%'
+  Image:
+    description: Glance image
+    default: overcloud-full
+    constraints:
+      - custom_constraint: glance.image
+  KeyName:
+    description: Key name
+    default: guest-key
+
+  # Example of structured parameter value
+  ServiceNetMap:
+    description: Mapping of service_name -> network name.
+    default:
+      NeutronTenantNetwork: tenant
+      CinderApiNetwork: internal_api
+      CinderIscsiNetwork: storage
+      GlanceApiNetwork: storage
+      GlanceRegistryNetwork: internal_api
+      KeystoneAdminApiNetwork: ctlplane # allows undercloud to config endpoints
+      KeystonePublicApiNetwork: internal_api
+      NeutronApiNetwork: internal_api
+      HeatApiNetwork: internal_api
+      NovaApiNetwork: internal_api
+      NovaMetadataNetwork: internal_api
+      NovaVncProxyNetwork: internal_api
+      SwiftMgmtNetwork: storage_mgmt
+      SwiftProxyNetwork: storage
+      SaharaApiNetwork: internal_api
+      CephClusterNetwork: storage_mgmt
+      CephPublicNetwork: storage
+      ControllerHostnameResolveNetwork: internal_api
+      ComputeHostnameResolveNetwork: internal_api
+      BlockStorageHostnameResolveNetwork: internal_api
+      ObjectStorageHostnameResolveNetwork: internal_api
+      CephStorageHostnameResolveNetwork: storage
+    
+    type: json
+  
+  # WARNING: Unused parameter
+  RandomParameter:
+    description: Unused parameter
+
+
+resources:
+  Controller:
+    type: OS::Heat::ResourceGroup
+    properties:
+      # ERROR: Basic non-existent parameter resolution
+      count: {get_param: NonExistentParameter}
+
+      resource_def:
+        type: OS::TripleO::Controller
+        properties:
+          # Properties with matching parameters
+          ControllerPassword: {get_param: ControllerPassword}
+          CinderPassword: {get_param: CinderPassword}
+          GlancePassword: {get_param: GlancePassword}
+          HeatPassword: {get_param: HeatPassword}
+          Image: {get_param: Image}
+          KeyName: {get_param: KeyName}
+          NovaPassword: {get_param: NovaPassword}
+          SwiftPassword: {get_param: SwiftPassword}
+          ServiceNetMap: {get_param: ServiceNetMap}
+
+          #PublicVirtualIP: {get_attr: [VipMap, net_ip_map, external]}
+          #EndpointMap: {get_attr: [EndpointMap, endpoint_map]}
+          #CeilometerApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, CeilometerApiNetwork]}]}
+          #CinderApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, CinderApiNetwork]}]}
+          #HeatApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, HeatApiNetwork]}]}
+          #GlanceApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
+          #NovaApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+          #SwiftProxyVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, SwiftProxyNetwork]}]}
+          #KeystoneAdminApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystoneAdminApiNetwork]}]}
+          #KeystonePublicApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
+          #NeutronApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NeutronApiNetwork]}]}
+          #NovaApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+
+          Hostname:
+            str_replace:
+              template: {get_param: ControllerHostnameFormat}
+              params:
+              #  Pseudo-parameter usage
+                '%stackname%': {get_param: 'OS::stack_name'}
+
+          # ERROR: Property without matching parameter
+          ForeverAloneProperty: random-value
+

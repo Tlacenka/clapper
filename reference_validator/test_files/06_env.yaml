@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# File: 06_env.yaml
+# Brief: Test nr. 6 - Basic HOT Resolution
+
+parameters:
+  # Parameters with match in root template
+  ControllerPassword: controller1234
+  CinderPassword: cinder1234
+  GlancePassword: glance1234
+  HeatPassword: heat1234
+  SwiftPassword: swift1234
+  NovaPassword: nova1234
+
+  # ERROR: Parameter without match
+  NoMatchParameter: without-match
+
+parameter_defaults:
+  # Parameter default with match
+  Hostname: guest
+
+  # WARNING: Parameter default without match
+  DefaultNoMatch: without-match
+
+resource_registry:
+  # Testing wildcards
+  "OS::TripleO::Controller*": "OS::TripleO::MyController*"
+  "*MyController": "*AwesomeController"
+  OS::TripleO::AwesomeController: 06_controller.yaml

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# File: 03_root.yaml
+# Brief: Test nr. 3 - Parsing valid HOT
+#        Section structure is missing
+
+heat_template_version:
+
+description:
+
+parameters:
+
+parameter_groups:
+
+resources:
+
+outputs:
+
+conditions:

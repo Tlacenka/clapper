@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# File: 05_root.yaml
+# Brief: Test nr. 5 - Parsing valid HOT
+#        Instance property structure is missing
+
+heat_template_version:
+
+description:
+
+parameters:
+  parameter1:
+    type:
+    label:
+    description:
+    default:
+    hidden:
+    constraints:
+    immutable:
+
+parameter_groups:
+  label:
+  description:
+  parameters:
+    - param1:
+    - param2:
+
+resources:
+  resource1:
+    type:
+    properties:
+    metadata:
+    depends_on:
+    update_policy:
+    deletion_policy:
+    external_id:
+    condition:
+    depends_on:
+
+  resourceRG:
+    type:
+    properties:
+      count:
+      resource_def:
+
+  resourceASG:
+    type:
+    depends_on:
+    properties:
+      desired_capacity:
+      min_size:
+      max_size:
+      resource:
+      
+
+outputs:
+  output1:
+    description:
+    value:
+    condition:
+
+conditions:
+  condition1:
+  condition2:
