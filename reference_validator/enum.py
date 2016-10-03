@@ -3,12 +3,12 @@
 
 # File: enum.py
 # Brief: Additional classes defining enumeration types for HOT reference validator
-# Classes: Colors, TreeInfo, ErrorTypes, Grouptypes
+# Classes: Fonts, TreeInfo, ErrorTypes, Grouptypes
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
-class Colors:
-    ''' Code for colouring output '''
+class Fonts:
+    ''' Code for formatting output '''
     BLUE      = '\033[94m'
     GREEN     = '\033[92m'
     YELLOW    = '\033[93m'
@@ -34,6 +34,8 @@ class ErrorTypes:
     MISS_PROP  = 4    # parameter in file B does not have corresponding property in file A
     MISS_PARAM = 5    # property in file A does not have corresponding parameter in file B
     DEPENDS_ON = 6    # resource that other resource depends on does not exist
+    ENV_PARAM = 7     # parameter value defined in env file has no match in root template
+    ENV_PARAM_DEFAULT = 8 # parameter default value from env file has no match
 
 class Grouptypes:
     ''' Resource types for groups of resources '''

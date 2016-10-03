@@ -98,7 +98,8 @@ class Resource:
 
         self.type = ''
 
-        if (self.structure is not None) and ('type' in self.structure):
+        if ((self.structure is not None) and ('type' in self.structure) and
+            (self.structure['type'] is not None)):
             self.type = value['type']       # resource type (filename if mapped)
         self.used = False                   # usage flag
 

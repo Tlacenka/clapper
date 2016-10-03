@@ -159,22 +159,19 @@ class HotValidator:
 
     def add_param_defaults(self):
         ''' Add default from param_defaults where missing '''
-        for hot in self.templates + self.mappings:
-            for p in hot.params:
+        for env in self.environments:
+            for key, value in six.iteritems(env.params_default):
+                found = False
+                # Find corresponding parameter(s)
+                for hot in self.templates + self.mappings:
+                    for p in hot.params:
+                        if (key == p.name) and (p.default is None):
+                            p.default = value
+                            found = True
 
-                # Try to find param_default
-                if p.default is None:
-                    found = False
-                    for env in self.environments:
-                        for key, value in six.iteritems(env.params_default):
-                            
-                            # Add default
-                            if p.name == key:
-                                p.default = value
-                                found = True
-                                break
-                        if found:
-                            break
+                if not found:
+                    env.invalid.append(hotclasses.InvalidReference(key,
+                             '', enum.ErrorTypes.ENV_PARAM_DEFAULT, None))
 
     def add_parameters(self):
         ''' Add additional parameters from prompt to root template file
@@ -199,7 +196,7 @@ class HotValidator:
 
         # Assign values to parameters from environments
         for env in self.environments:
-            if env.params:
+            if env.params is not None:
 
                 # Go through all parameters declare in environments
                 for key, value in six.iteritems(env.params):
@@ -212,8 +209,8 @@ class HotValidator:
 
                     # If parameter does not exist in the root template
                     if not found:
-                        self.templates[0].invalid.append(hotclasses.InvalidReference(key,
-                             env.path, enum.ErrorTypes.GET_PARAM, None))
+                        env.invalid.append(hotclasses.InvalidReference(key,
+                             '', enum.ErrorTypes.ENV_PARAM, None))
 
     def find_mapping(self, mapping):
         ''' Searches if there is a mapping with passed side available.
@@ -507,15 +504,15 @@ class HotValidator:
         # Environments
         if self.environments:
             if self.pretty_format:
-                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
-                      'Environments:' + enum.Colors.DEFAULT)
+                print(enum.Fonts.ORANGE + enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
+                      'Environments:' + enum.Fonts.DEFAULT)
             else:
                 print('Environments:')
 
             # Print total
             if self.pretty_format:
-                print(enum.Colors.BOLD + 'Total: ' + str(len(self.environments)) +
-                      enum.Colors.DEFAULT)
+                print(enum.Fonts.BOLD + 'Total: ' + str(len(self.environments)) +
+                      enum.Fonts.DEFAULT)
             else:
                 print ('Total: ' + str(len(self.environments)))
             print('')
@@ -524,59 +521,48 @@ class HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(enum.Colors.BOLD + enum.Colors.UNDERLINE +
-                          'File ' + enum.Colors.BLUE +
+                    print(enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
+                          'File ' + enum.Fonts.BLUE +
                           os.path.relpath(env.path, self.init_dir) +
-                          enum.Colors.DEFAULT)
+                          enum.Fonts.DEFAULT)
                 else:
                     print('File ' + os.path.relpath(env.path, self.init_dir))
                 print('')
 
                 # Parameters section
-                if False in list(env.params.values()):
+                if env.invalid:
                     env.ok = False
-                    if self.pretty_format:
-                         print (enum.Colors.BOLD + 'Parameters without match in root template:' +
-                                enum.Colors.DEFAULT)
-                    else:
-                         print ('Parameters without match in root template:')
-                    for par in [x for x in list(env.params.keys())
-                                if env.params[x] == False]:
-                        if self.pretty_format:
-                            print ('- ' + enum.Colors.YELLOW + par + enum.Colors.DEFAULT)
-                        else:
-                            print ('- ' + par)
-                    print('')
 
-                # Parameter_defaults section
-                if False in list(env.params_default.values()):
-                    env.ok = False
-                    if self.pretty_format:
-                        print (enum.Colors.BOLD + 'Parameter defaults without match:' +
-                               enum.Colors.DEFAULT)
-                    else:
-                        print ('Parameter defaults without match:')
+                    for ref in env.invalid:
+                        if ref.type == enum.ErrorTypes.ENV_PARAM:
+                            if self.pretty_format:
+                                print ('Parameter ' + enum.Fonts.YELLOW +
+                                       ref.referent + enum.Fonts.DEFAULT +
+                                       ' has no match in root template.')
+                            else:
+                                print ('Parameter ' + ref.referent + ' has no match in root template.')
 
-                    for par in [x for x in list(env.params_default.keys())
-                                if env.params_default[x] == False]:
-                        if self.pretty_format:
-                            print ('- ' + enum.Colors.YELLOW + par +
-                                    enum.Colors.DEFAULT)
-                        else:
-                            print ('- ' + par)
-                    print('')
+                        # Parameter_defaults section
+                        elif ref.type == enum.ErrorTypes.ENV_PARAM_DEFAULT:
+                            if self.pretty_format:
+                                print ('Parameter default ' + enum.Fonts.YELLOW +
+                                       ref.referent + enum.Fonts.DEFAULT +
+                                       ' has no match in the stack.')
+                            else:
+                                print ('Parameter default' + ref.referent + ' has no match in the stack.')
+                print('')
 
                 # Print file status as OK if there were no problems
                 if env.ok:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.GREEN +
-                              'OK' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Status: ' + enum.Fonts.GREEN +
+                              'OK' + enum.Fonts.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.RED +
-                              'FAILED' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Status: ' + enum.Fonts.RED +
+                              'FAILED' + enum.Fonts.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -587,16 +573,16 @@ class HotValidator:
         # TODO: Print as DFS, rather going through the tree instead of the list
         for hot in [x for x in [self.templates, self.mappings] if len(x)]:
             if self.pretty_format:
-                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
+                print(enum.Fonts.ORANGE + enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
                       ('HOT Files:' if hot == self.templates else 'Mapped HOT Files:') +
-                      enum.Colors.DEFAULT)
+                      enum.Fonts.DEFAULT)
             else:
                 print(('HOT Files:' if hot == self.templates else 'Mapped HOT Files:'))
 
             # Print total
             if self.pretty_format:
-                print(enum.Colors.BOLD + 'Total: ' + str(len(self.templates) if hot == self.templates else len(self.mappings)) +
-                      enum.Colors.DEFAULT)
+                print(enum.Fonts.BOLD + 'Total: ' + str(len(self.templates) if hot == self.templates else len(self.mappings)) +
+                      enum.Fonts.DEFAULT)
             else:
                 print ('Total: ' + str(len(self.templates) if hot == self.templates else len(self.mappings)))
             print('')
@@ -605,14 +591,14 @@ class HotValidator:
 
                 # Print title
                 if self.pretty_format:
-                    print(enum.Colors.BOLD + enum.Colors.UNDERLINE + 'File ' +
-                          enum.Colors.BLUE + node.path + enum.Colors.DEFAULT)
+                    print(enum.Fonts.BOLD + enum.Fonts.UNDERLINE + 'File ' +
+                          enum.Fonts.BLUE + node.path + enum.Fonts.DEFAULT)
                 else:
                     print('File ' + node.path)
 
                 # Print parent node for better navigation
                 if self.pretty_format:
-                    print(enum.Colors.BOLD + 'Parent: ' + enum.Colors.DEFAULT +
+                    print(enum.Fonts.BOLD + 'Parent: ' + enum.Fonts.DEFAULT +
                           (os.path.relpath(node.parent.path, self.init_dir) if (node.parent is not None) else 'None (root)'))
                 else:
                     print('Parent: ' + (os.path.relpath(node.parent.path,
@@ -623,7 +609,7 @@ class HotValidator:
                 # TODO: optimize so that no error has two invalid records (esp. in case of nested)
                 if node.invalid:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD + 'Invalid references:' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Invalid references:' + enum.Fonts.DEFAULT)
                     else:
                         print('Invalid references:')
 
@@ -631,9 +617,9 @@ class HotValidator:
                         # get_resource
                         if ref.type == enum.ErrorTypes.GET_RESOURCE:
                             if self.pretty_format:
-                                print ('Resource ' + enum.Colors.YELLOW + ref.referent +
-                                       enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
-                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
+                                print ('Resource ' + enum.Fonts.YELLOW + ref.referent +
+                                       enum.Fonts.DEFAULT + ' referred in ' + enum.Fonts.YELLOW +
+                                       ref.element + enum.Fonts.DEFAULT + ' is not declared.')
                             else:
                                 print ('Resource ' + ref.referent + ' referred in ' + ref.element +
                                        ' is not declared.')
@@ -641,9 +627,9 @@ class HotValidator:
                         # get_param
                         elif ref.type == enum.ErrorTypes.GET_PARAM:
                             if self.pretty_format:
-                                print ('Parameter ' + enum.Colors.YELLOW + ref.referent +
-                                       enum.Colors.DEFAULT + ' referred in ' + enum.Colors.YELLOW +
-                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
+                                print ('Parameter ' + enum.Fonts.YELLOW + ref.referent +
+                                       enum.Fonts.DEFAULT + ' referred in ' + enum.Fonts.YELLOW +
+                                       ref.element + enum.Fonts.DEFAULT + ' is not declared.')
                             else:
                                 print ('Parameter ' + ref.referent + ' referred in ' + ref.element +
                                        ' is not declared.')
@@ -651,10 +637,10 @@ class HotValidator:
                         # get_attr
                         elif ref.type == enum.ErrorTypes.GET_ATTR:
                             if self.pretty_format:
-                                print ('Instance ' + enum.Colors.YELLOW + ref.referent +
-                                       enum.Colors.DEFAULT + ' referred by ' + enum.Colors.YELLOW +
-                                       'get_attr' + enum.Colors.DEFAULT + ' in ' + enum.Colors.YELLOW +
-                                       ref.element + enum.Colors.DEFAULT + ' is not declared.')
+                                print ('Instance ' + enum.Fonts.YELLOW + ref.referent +
+                                       enum.Fonts.DEFAULT + ' referred by ' + enum.Fonts.YELLOW +
+                                       'get_attr' + enum.Fonts.DEFAULT + ' in ' + enum.Fonts.YELLOW +
+                                       ref.element + enum.Fonts.DEFAULT + ' is not declared.')
                             else:
                                 print ('Instance ' + ref.referent + ' referred by get_attr in ' +
                                        ref.element + ' is not declared.')
@@ -662,10 +648,10 @@ class HotValidator:
                         # missing property
                         elif ref.type == enum.ErrorTypes.MISS_PROP:
                             if self.pretty_format:
-                                print('Parameter ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
-                                      ' has no corresponding default or property in ' +  enum.Colors.YELLOW +
-                                      ref.element + enum.Colors.DEFAULT + ' in ' +
-                                      enum.Colors.YELLOW + os.path.relpath(ref.parent, self.init_dir) + enum.Colors.DEFAULT + '.')
+                                print('Parameter ' + enum.Fonts.YELLOW + ref.referent + enum.Fonts.DEFAULT +
+                                      ' has no corresponding default or property in ' +  enum.Fonts.YELLOW +
+                                      ref.element + enum.Fonts.DEFAULT + ' in ' +
+                                      enum.Fonts.YELLOW + os.path.relpath(ref.parent, self.init_dir) + enum.Fonts.DEFAULT + '.')
                             else:
                                 print('Parameter ' + ref.referent + ' has no corresponding default or property in ' +
                                       ref.element + ' in ' + os.path.relpath(ref.parent, self.init_dir) + '.')
@@ -673,9 +659,9 @@ class HotValidator:
                         # missing parameter
                         elif ref.type == enum.ErrorTypes.MISS_PARAM:
                             if self.pretty_format:
-                                print('Property ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
-                                      ' has no corresponding parameter in ' + enum.Colors.YELLOW +
-                                      os.path.relpath(ref.parent, self.init_dir) + enum.Colors.DEFAULT + '.')
+                                print('Property ' + enum.Fonts.YELLOW + ref.referent + enum.Fonts.DEFAULT +
+                                      ' has no corresponding parameter in ' + enum.Fonts.YELLOW +
+                                      os.path.relpath(ref.parent, self.init_dir) + enum.Fonts.DEFAULT + '.')
                             else:
                                 print('Property ' + ref.referent + ' has no corresponding parameter in ' +
                                       os.path.relpath(ref.parent, self.init_dir) + '.')
@@ -683,9 +669,9 @@ class HotValidator:
                         # dependency not found
                         elif ref.type == enum.ErrorTypes.DEPENDS_ON:
                             if self.pretty_format:
-                                print('Resource ' + enum.Colors.YELLOW + ref.referent + enum.Colors.DEFAULT +
-                                      ' that resource ' +  enum.Colors.YELLOW +
-                                      ref.element + enum.Colors.DEFAULT + ' depends on is not declared.')
+                                print('Resource ' + enum.Fonts.YELLOW + ref.referent + enum.Fonts.DEFAULT +
+                                      ' that resource ' +  enum.Fonts.YELLOW +
+                                      ref.element + enum.Fonts.DEFAULT + ' depends on is not declared.')
                             else:
                                 print('Resource ' + ref.referent + ' that resource ' +
                                       ref.element + ' depends on is not declared.')
@@ -694,14 +680,14 @@ class HotValidator:
                 # Unused parameters
                 if False in [x.used for x in node.params]:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD +  'Unused parameters:' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD +  'Unused parameters:' + enum.Fonts.DEFAULT)
                     else:
                         print('Unused parameters:')
 
                     for par in node.params:
                         if par.used == False:
                             if self.pretty_format:
-                                print('- ' + enum.Colors.YELLOW + par.name + enum.Colors.DEFAULT)
+                                print('- ' + enum.Fonts.YELLOW + par.name + enum.Fonts.DEFAULT)
                             else:
                                 print('- ' + par.name)
                     print('')
@@ -709,15 +695,15 @@ class HotValidator:
                 # Print hidden parameters (optional)
                 if (self.print_unused) and [True for x in node.params if x.hidden]:
                     if (self.pretty_format):
-                        print(enum.Colors.BOLD + 'Hidden parameters:' +
-                              enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Hidden parameters:' +
+                              enum.Fonts.DEFAULT)
                     else:
                         print('Hidden parameters:')
                     
                     for par in node.params:
                         if par.hidden:
                             if self.pretty_format:
-                                print('- ' + enum.Colors.YELLOW + par.name + enum.Colors.DEFAULT)
+                                print('- ' + enum.Fonts.YELLOW + par.name + enum.Fonts.DEFAULT)
                             else:
                                 print('- ' + par.name)
                     print('')
@@ -725,15 +711,15 @@ class HotValidator:
                 # Print unused resources (optional)
                 if (self.print_unused) and [True for x in node.resources if not x.used]:
                     if (self.pretty_format):
-                        print(enum.Colors.BOLD + 'Resources without reference:' +
-                              enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Resources without reference:' +
+                              enum.Fonts.DEFAULT)
                     else:
                         print('Resources without reference:')
 
                     for resource in node.resources:
                         if resource.used == False:
                             if self.pretty_format:
-                                print('- ' + enum.Colors.YELLOW + resource.name + enum.Colors.DEFAULT +
+                                print('- ' + enum.Fonts.YELLOW + resource.name + enum.Fonts.DEFAULT +
                                       ' (' + resource.type + ')')
                             else:
                                 print('- ' + resource.name)
@@ -742,14 +728,14 @@ class HotValidator:
                 # Print file status as OK if there were no problems
                 if node.ok:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.GREEN +
-                              'OK' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Status: ' + enum.Fonts.GREEN +
+                              'OK' + enum.Fonts.DEFAULT)
                     else:
                         print ('Status: OK')
                 else:
                     if self.pretty_format:
-                        print(enum.Colors.BOLD + 'Status: ' + enum.Colors.RED +
-                              'FAILED' + enum.Colors.DEFAULT)
+                        print(enum.Fonts.BOLD + 'Status: ' + enum.Fonts.RED +
+                              'FAILED' + enum.Fonts.DEFAULT)
                     else:
                         print('Status: FAILED')
 
@@ -758,8 +744,8 @@ class HotValidator:
         # Print tree structure
         if self.print_structure:
             if self.pretty_format:
-                print(enum.Colors.ORANGE + enum.Colors.BOLD + enum.Colors.UNDERLINE +
-                      'Structure:' + enum.Colors.DEFAULT)
+                print(enum.Fonts.ORANGE + enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
+                      'Structure:' + enum.Fonts.DEFAULT)
             else:
                 print('Structure:')
 
