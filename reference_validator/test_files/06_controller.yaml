@@ -61,6 +61,7 @@ outputs:
   ip_address:
     description: IP address
     value:
+      network: {get_param:[ServiceNetMaps, ControllerHostnameResolveNetwork]}
       IPv4: '127.0.0.1'
       IPv6: '::1'
 

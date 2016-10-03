@@ -165,9 +165,14 @@ class HotValidator:
                 # Find corresponding parameter(s)
                 for hot in self.templates + self.mappings:
                     for p in hot.params:
-                        if (key == p.name) and (p.default is None):
-                            p.default = value
+                        # Parameter found
+                        if key == p.name:
                             found = True
+
+                            # Set value if needed
+                            if p.default is None:
+                                p.default = value
+                                break
 
                 if not found:
                     env.invalid.append(hotclasses.InvalidReference(key,
@@ -366,7 +371,6 @@ class HotValidator:
 
             # Continue with child nodes
             if resource.child is not None:
-                resource.child.validate_file(self.curr_nodes)
                 self.validate_references(resource.child)
 
     def print_tree(self, root, root_position, indent, branch_list):
@@ -567,7 +571,6 @@ class HotValidator:
                         print('Status: FAILED')
 
                 print('\n\n')
-
 
         # HOT Files and mappings
         # TODO: Print as DFS, rather going through the tree instead of the list
