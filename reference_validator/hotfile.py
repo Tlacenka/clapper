@@ -594,7 +594,8 @@ class HotFile:
                 if diff == p.name:
                     found = True
 
-                    if (p.default is None):
+                    # Only if parameter has no default
+                    if p.default is None:
                         self.invalid.append(hotclasses.InvalidReference(
                                             diff, resource.name,
                                             enum.ErrorTypes.MISS_PROP, parent.path))

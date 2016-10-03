@@ -43,9 +43,14 @@ parameters:
     type: string
 
   # Additional parameters
+  # With default value
   Flavor:
     description: image flavor
     default: baremetal
+
+  # ERROR: Without default or property
+  NoDefaultOrProperty:
+    description: parameter without default
 
 resources:
 
@@ -61,12 +66,19 @@ outputs:
   ip_address:
     description: IP address
     value:
-      network: {get_param:[ServiceNetMaps, ControllerHostnameResolveNetwork]}
-      IPv4: '127.0.0.1'
+      # Checking resolution involving multiple files
+      network: {get_param:[ServiceNetMap, ControllerHostnameResolveNetwork]}
+
+      # ERROR: NonExistingNetwork does not exist in parameter ServiceNetMap
+      non-existing-network: {get_param:[ServiceNetMap, NonExistingNetwork]}
+      IPv4:
+        - '127.0.0.1'
+        - '127.0.0.2'
       IPv6: '::1'
 
   # Output value given by get_
   server_resource:
     description: Resource handler
     value:
+      # Checking get_resource
       {get_resource: Controller}

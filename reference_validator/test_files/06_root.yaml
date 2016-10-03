@@ -96,3 +96,15 @@ resources:
           # ERROR: Property without matching parameter
           ForeverAloneProperty: random-value
 
+outputs:
+  controller_network:
+    value:
+      # Checking valid get_attr resolution
+      IPv4: {get_attr: [Controller, ip_address, IPv4, 1]}
+
+      # ERROR: Get_attr resolution with non-existent index
+      IPv6: {get_attr: [Controller, ip_address, IPv6, 1]}
+  controller:
+    value:
+      # Valid get_attr resolution
+      handler: {get_attr: [Controller, server_resource]}
