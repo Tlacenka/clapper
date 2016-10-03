@@ -107,8 +107,12 @@ class HotValidator:
             # Add to currently validated files
             self.curr_nodes.append(env_node) #
 
+            # Empty file
+            if env_node.structure is None:
+                continue
+
             # Save mappings
-            if 'resource_registry' in env_node.structure:
+            if ('resource_registry' in env_node.structure) and (env_node.structure['resource_registry'] is not None):
                 for origin, custom in six.iteritems(env_node.structure['resource_registry']):
                     if type(custom) == str:
                         env_node.resource_registry[origin] = custom
@@ -124,11 +128,11 @@ class HotValidator:
                                     env_code.resource_registry[key] = [value, res]
 
             # Save additional parameters + parameters with default values
-            if 'parameters' in env_node.structure:
+            if ('parameters' in env_node.structure) and (env_node.structure['parameters'] is not None):
                 for par in list(env_node.structure['parameters'].keys()):
                     env_node.params[par] = False
 
-            if 'parameter_defaults' in env_node.structure:
+            if ('parameter_defaults' in env_node.structure) and (env_node.structure['parameter_defaults'] is not None):
                 for par in list(env_node.structure['parameter_defaults'].keys()):
                     env_node.params_default[par] = False
 

@@ -76,24 +76,26 @@ class HotFile:
             print('ERROR in file ' + self.path + ': ' + str(err), file=sys.stderr)
             sys.exit(1)
 
+        # Empty file
+        if self.structure is None:
+            return
+
         # Save all parameters names, resources and properties
-        if 'parameters' in self.structure:
+        if ('parameters' in self.structure) and (self.structure['parameters'] is not None):
             for param in self.structure['parameters'].items():
                 self.params.append(hotclasses.PropertyParameter(param, True))
 
-        # Save name and structure of each resource
-        if 'resources' in self.structure:
+        if ('resources' in self.structure) and (self.structure['resources'] is not None):
             for key, value in six.iteritems(self.structure['resources']):
                 self.resources.append(hotclasses.Resource(key, value, self))
 
-        # Save outputs
-        if 'outputs' in self.structure:
+        if ('outputs' in self.structure) and (self.structure['outputs'] is not None):
             for key, value in six.iteritems(self.structure['outputs']):
                 self.outputs[key] = value
 
         # Examine children nodes to get the full information about references
         for resource in self.resources:
-            if resource.type.endswith('.yaml'):
+            if (resource.type is not None) and (resource.type.endswith('.yaml')):
                 templates.append(HotFile(self, resource.type))
 
                 # Add child
@@ -114,6 +116,10 @@ class HotFile:
 
         # Add current node at the beginning
         curr_nodes.append(self)
+
+        # If the file is empty
+        if self.structure is None:
+            return
 
         # Iterate over sections (all children validated by now)
         for section, instances in six.iteritems(self.structure):
@@ -618,12 +624,14 @@ class HotFile:
         ''' Sets resources which other resources depend on as used '''
 
         for r in self.resources:
-            if 'depends_on' in r.structure:
+            if (r.structure is not None) and ('depends_on' in r.structure):
                 found = False
                 if type(r.structure['depends_on']) == str:
                     dependencies = [r.structure['depends_on']]
                 elif type(r.structure['depends_on']) == list:
                     dependencies = r.structure['depends_on']
+                else:
+                    continue
 
                 # Check dependencies
                 for d in dependencies:

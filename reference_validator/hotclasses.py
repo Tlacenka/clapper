@@ -70,6 +70,11 @@ class PropertyParameter:
         ''' Merges 2 objects, uses attributes of the second object if they are defined.
             obj = parameter
         '''
+
+        # Cannot merge with None
+        if obj is None:
+            return
+
         # Objects must have the same name
         if self.name != obj.name:
             return
@@ -90,7 +95,11 @@ class Resource:
     def __init__(self, name, value, hot):
         self.name = name                    # name of resource variable
         self.structure = value              # resource structure
-        self.type = value['type']           # resource type (filename if mapped)
+
+        self.type = ''
+
+        if (self.structure is not None) and ('type' in self.structure):
+            self.type = value['type']       # resource type (filename if mapped)
         self.used = False                   # usage flag
 
         self.hotfile = hot                  # file containing resource
@@ -108,23 +117,32 @@ class Resource:
 
 
         # If there are properties, save them
-        if 'properties' in value:
+        if (self.structure is not None) and ('properties' in self.structure):
 
             # Type and properties of the individual resource
             if self.isGroup:
                 self.grouptype = self.type
-                if self.grouptype == enum.Grouptypes.ASG:
+                
+                if ((self.grouptype == enum.Grouptypes.ASG) and
+                    ('resource' in self.structure['properties']) and
+                    ('type' in self.structure['properties'['resource']])):
                     self.type = self.structure['properties']['resource']['type']
-                else:
+                elif ((self.grouptype == enum.Grouptypes.RG) and
+                      ('resource_def' in self.structure['properties']) and
+                      ('type' in self.structure['properties']['resource_def'])):
                     self.type = self.structure['properties']['resource_def']['type']
+                else:
+                    # No properties found
+                    return
 
                 # Load properties
                 for prop in self.structure['properties'][('resource' if
                             self.grouptype == enum.Grouptypes.ASG else 'resource_def')]['properties'].items():
                     self.properties.append(PropertyParameter(prop, False))
             else:
-                for prop in self.structure['properties'].items():
-                    self.properties.append(PropertyParameter(prop, False))
+                if self.structure['properties'] is not None:
+                    for prop in self.structure['properties'].items():
+                        self.properties.append(PropertyParameter(prop, False))
 
     def clone(self):
         ''' Creates a new deep copy of the object,
