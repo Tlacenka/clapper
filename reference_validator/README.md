@@ -34,7 +34,22 @@ Optionally, it also prints a list of all unused instances.
 <h2> Files </h2>
 
  - ``reference_validator.py`` contains the main file that runs the validation based on parameters
- - ``YAML_HotValidator.py`` contains corresponding class and encapsulates validator behaviour
- - ``YAML_Hotfile.py`` contains corresponding class that realizes the file validation itself
- - ``YAML_Enums.py`` contains all classes used for enumeration ( ``YAML_colours``, ``YAML_Types``, ``YAML_tree_info``)
- - ``YAML_HotClasses.py`` contains the rest of the classes used for validation ( ``YAML_Env``, ``YAML_Prop_Par``, ``YAML_Resource``, ``YAML_Reference``)
+ - ``hotvalidator.py`` contains corresponding class and encapsulates validator behaviour
+ - ``hotfile.py`` contains corresponding class that realizes the file validation itself
+ - ``enum.py`` contains all classes used for enumeration ( ``Fonts``, ``TreeInfo``, ``ErrorTypes``, ``GroupTypes``, ``GetAttrStates``, ``GetParamStates``)
+ - ``hotclasses.py`` contains the rest of the classes used for validation ( ``Environment``, ``PropertyParameter``, ``Resource``, ``InvalidReference``)
+
+<h2> Tests </h2>
+In order to validate the script, tests were created. Testing environment is created in `tests` folder. In this folder,
+there are following subfolders:
+ - `test_files` containing files - HOT and environment files demonstrating different scenarios. These files also include comments about errors and warnings in the tested HOT.
+    As the validator does not end after coming across the first error, these comments help readability.
+ - `test_logs` containing log files that are gained by running validator on test files and consist of standard error output and standard output stream.
+ - `test_diffs` containing files that consist of expected validator output and are to be compared with logs during the testing process.
+ 
+Testing is realized by executing a script called `run_tests.sh` which is located in the `reference_validator` folder.
+
+
+<h3> Usage </h3>
+
+    $ ./run_tests.sh [-c]

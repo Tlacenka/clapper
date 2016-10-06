@@ -3,7 +3,7 @@
 
 # File: enum.py
 # Brief: Additional classes defining enumeration types for HOT reference validator
-# Classes: Fonts, TreeInfo, ErrorTypes, Grouptypes
+# Classes: Fonts, TreeInfo, ErrorTypes, Grouptypes, GetAttrStates, GetParamStates
 # Author: Katerina Pilatova (kpilatov)
 # Date: 2016
 
