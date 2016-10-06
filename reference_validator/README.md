@@ -54,4 +54,4 @@ Testing is realized by executing a script called `run_tests.sh` which is located
 
     $ ./run_tests.sh [-c]
 
-    - ``-c`` when selected, log files are automatically removed after the testing process is finished
+  - ``-c`` when selected, log files are automatically removed after the testing process is finished
