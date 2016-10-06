@@ -2,25 +2,12 @@
 
 # File: 06_root.yaml
 # Brief: Test nr. 6 - Basic HOT Resolution
+# TODO: invalid depends_on, get_resource, 
 
 parameters:
   # Values added via environment
   ControllerPassword:
     description: Controller password
-  CinderPassword:
-    description: Cinder password
-  GlancePassword:
-    description: Glance password
-  HeatPassword:
-    description: Heat password
-  NovaPassword:
-    description: Nova password
-  SwiftPassword:
-    description: Swift Password
-
-  # Value added via environment parameter_defaults
-  Hostname:
-    description: hostname
 
   # Value determined by resource/default
   ControllerHostnameFormat:
@@ -40,29 +27,18 @@ parameters:
   ServiceNetMap:
     description: Mapping of service_name -> network name.
     default:
-      NeutronTenantNetwork: tenant
-      CinderApiNetwork: internal_api
-      CinderIscsiNetwork: storage
-      GlanceApiNetwork: storage
-      GlanceRegistryNetwork: internal_api
-      KeystoneAdminApiNetwork: ctlplane # allows undercloud to config endpoints
-      KeystonePublicApiNetwork: internal_api
-      NeutronApiNetwork: internal_api
-      HeatApiNetwork: internal_api
-      NovaApiNetwork: internal_api
-      NovaMetadataNetwork: internal_api
-      NovaVncProxyNetwork: internal_api
-      SwiftMgmtNetwork: storage_mgmt
-      SwiftProxyNetwork: storage
+      ControllerMgmtNetwork: storage_mgmt
+      ControllerProxyNetwork: storage
       ControllerHostnameResolveNetwork: internal_api
-      ComputeHostnameResolveNetwork: internal_api
-      BlockStorageHostnameResolveNetwork: internal_api
-      ObjectStorageHostnameResolveNetwork: internal_api
     type: json
   
   # WARNING: Unused parameter
   RandomParameter:
     description: Unused parameter
+
+  # Value added via environment parameter_defaults
+  Hostname:
+    description: hostname
 
 
 resources:
@@ -70,20 +46,15 @@ resources:
     type: OS::Heat::ResourceGroup
     properties:
       # ERROR: Basic non-existent parameter resolution
-      count: {get_param: NonExistentParameter}
+      count: {get_param: NonExistingParameter}
 
       resource_def:
         type: OS::TripleO::Controller
         properties:
           # Properties with matching parameters
           ControllerPassword: {get_param: ControllerPassword}
-          CinderPassword: {get_param: CinderPassword}
-          GlancePassword: {get_param: GlancePassword}
-          HeatPassword: {get_param: HeatPassword}
           Image: {get_param: Image}
           KeyName: {get_param: KeyName}
-          NovaPassword: {get_param: NovaPassword}
-          SwiftPassword: {get_param: SwiftPassword}
           ServiceNetMap: {get_param: ServiceNetMap}
 
           Hostname:
@@ -108,3 +79,6 @@ outputs:
     value:
       # Valid get_attr resolution
       handler: {get_attr: [Controller, server_resource]}
+
+      # ERROR: invalid get_resource resolution
+      invalid_handler: {get_resource: NonExistingResource}

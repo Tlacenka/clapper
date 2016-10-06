@@ -377,7 +377,7 @@ class HotFile:
                     self.invalid.append(hotclasses.InvalidReference(hierarchy,
                                 name + ' - output of ' + str(hierarchy),
                                 enum.ErrorTypes.GET_ATTR, None))
-                print (self.path, hierarchy)
+
                 self.ok = False
                 return None
 
@@ -476,6 +476,7 @@ class HotFile:
                         value = v['value']
                         found = True
                         break
+
                 # Output name not found
                 if not found:
                     next_state = enum.GetAttrStates.ERROR

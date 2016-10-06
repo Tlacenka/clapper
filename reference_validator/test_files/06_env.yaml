@@ -6,11 +6,6 @@
 parameters:
   # Parameters with match in root template
   ControllerPassword: controller1234
-  CinderPassword: cinder1234
-  GlancePassword: glance1234
-  HeatPassword: heat1234
-  SwiftPassword: swift1234
-  NovaPassword: nova1234
 
   # ERROR: Parameter without match
   NoMatchParameter: without-match
@@ -20,7 +15,7 @@ parameter_defaults:
   Hostname: guest
 
   # WARNING: Parameter default without match
-  DefaultNoMatch: without-match
+  NoMatchDefaultParameter: without-match
 
 resource_registry:
   # Testing wildcards
