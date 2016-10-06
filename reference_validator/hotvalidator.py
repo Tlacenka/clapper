@@ -554,7 +554,7 @@ class HotValidator:
                                        ' has no match in the stack.')
                             else:
                                 print ('Parameter default' + ref.referent + ' has no match in the stack.')
-                print('')
+                    print('')
 
                 # Print file status as OK if there were no problems
                 if env.ok:
@@ -575,6 +575,7 @@ class HotValidator:
         # HOT Files and mappings
         # TODO: Print as DFS, rather going through the tree instead of the list
         for hot in [x for x in [self.templates, self.mappings] if len(x)]:
+            
             if self.pretty_format:
                 print(enum.Fonts.ORANGE + enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
                       ('HOT Files:' if hot == self.templates else 'Mapped HOT Files:') +
@@ -592,12 +593,16 @@ class HotValidator:
 
             for node in hot:
 
+                if node != hot[0]:
+                    print('\n')
+
                 # Print title
                 if self.pretty_format:
                     print(enum.Fonts.BOLD + enum.Fonts.UNDERLINE + 'File ' +
-                          enum.Fonts.BLUE + node.path + enum.Fonts.DEFAULT)
+                          enum.Fonts.BLUE + os.path.relpath(node.path, self.init_dir) + 
+                          enum.Fonts.DEFAULT)
                 else:
-                    print('File ' + node.path)
+                    print('File ' + os.path.relpath(node.path, self.init_dir))
 
                 # Print parent node for better navigation
                 if self.pretty_format:
@@ -741,8 +746,6 @@ class HotValidator:
                               'FAILED' + enum.Fonts.DEFAULT)
                     else:
                         print('Status: FAILED')
-
-                print('\n')
 
         # Print tree structure
         if self.print_structure:

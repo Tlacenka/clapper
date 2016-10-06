@@ -2,7 +2,8 @@
 
 # File: 06_root.yaml
 # Brief: Test nr. 6 - Basic HOT Resolution
-# TODO: invalid depends_on, get_resource, 
+#        Contains 2 HOT files and 1 environment file
+#        Includes all possible types of errors (see enum.py ErrorTypes)
 
 parameters:
   # Values added via environment

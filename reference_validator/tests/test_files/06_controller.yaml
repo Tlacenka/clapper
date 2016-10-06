@@ -2,6 +2,8 @@
 
 # File: 06_controller.yaml
 # Brief: Test nr. 6 - Basic HOT Resolution
+#        Contains 2 HOT files and 1 environment file
+#        Includes all possible types of errors (see enum.py ErrorTypes)
 
 parameters:
 
@@ -35,6 +37,7 @@ resources:
 
   Controller:
     type: OS::TripleO::Server
+    depends_on: NonExistingResource
     properties:
       image: {get_param: Image}
       flavor: {get_param: Flavor}
