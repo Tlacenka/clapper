@@ -3,3 +3,110 @@
 # File: 07_root.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
 #        Contains 5 HOT files and 2 environment files
+
+# TODO: resolution across at least 3 YAML files (get_param > peroperty value is get_attr)
+#       RG and ASG stuff, getting resource via all sorts of keywords
+#       
+
+parameters:
+
+  ControllerCount:
+    type: number
+    default: 1
+    constraints:
+      - range: {min: 1}
+  ComputeCount:
+    type: number
+    default: 1
+    constraints:
+      - range: {min: 1}
+
+  # ServiceNetMap from overcloud.yaml
+  ServiceNetMap:
+    default:
+      NeutronTenantNetwork: tenant
+      CinderApiNetwork: internal_api
+      CinderIscsiNetwork: storage
+      GlanceApiNetwork: storage
+      GlanceRegistryNetwork: internal_api
+      KeystonePublicApiNetwork: internal_api
+      NeutronApiNetwork: internal_api
+      HeatApiNetwork: internal_api
+      NovaApiNetwork: internal_api
+      NovaMetadataNetwork: internal_api
+      NovaVncProxyNetwork: internal_api
+      SwiftMgmtNetwork: storage_mgmt
+      SwiftProxyNetwork: storage
+      CephClusterNetwork: storage_mgmt
+      CephPublicNetwork: storage
+      ControllerHostnameResolveNetwork: internal_api
+      ComputeHostnameResolveNetwork: internal_api
+      BlockStorageHostnameResolveNetwork: internal_api
+      ObjectStorageHostnameResolveNetwork: internal_api
+      CephStorageHostnameResolveNetwork: storage
+    type: json
+
+  # Parameters for NetIpMap
+  PublicVirtualIP:
+    default:
+      ip_address: 127.0.0.1
+      ip_address_uri: 127.0.0.1
+    type: json
+  InternalApiVirtualIP:
+    default:
+      ip_address: 127.0.0.2
+      ip_address_uri: 127.0.0.2
+    type: json
+  StorageVirtualIP:
+    default:
+      ip_address: 127.0.0.3
+      ip_address_uri: 127.0.0.3
+    type: json
+  StorageMgmtVirtualIP:
+    default:
+      ip_address: 127.0.0.4
+      ip_address_uri: 127.0.0.4
+    type: json
+
+resources:
+
+  # Usage of RG
+  Controller:
+    type: OS::Heat::ResourceGroup
+    properties:
+    
+      count: {get_param: ControllerCount}
+      resource_def:
+        type: OS::TripleO::MyController
+        properties:
+          # gets value from 07_netipmap.yaml
+          NetworkMap: {get_attr: [NetIpMap, net_ip_map]}
+          ServiceMap: {get_param: ServiceNetMap}
+
+  # Usage of ASG
+  Compute:
+    type: OS::Heat::AutoScalingGroup
+    depends_on: Controller
+    properties:
+      count: {get_param: ComputeCount}
+      resource:
+        type: OS::TripleO::MyCompute
+        properties:
+          #Flavor: {get_param: OvercloudComputeFlavor}
+          GlanceHost: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
+          #Image: {get_param: NovaImage}
+          KeystonePublicApiVirtualIP: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
+          NovaApiHost: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+          NovaPublicIP: {get_attr: [NetIpMap, net_ip_map, external]}
+
+  NetIpMap:
+    type: OS::TripleO::MyNetIpMap
+    properties:
+      ExternalIp: {get_param: [PublicVirtualIP, ip_address]}
+      ExternalIpUri: {get_param: [PublicVirtualIP, ip_address_uri]}
+      InternalApiIp: {get_param: [InternalApiVirtualIP, ip_address]}
+      InternalApiIpUri: {get_param: [InternalApiVirtualIP, ip_address_uri]}
+      StorageIp: {get_param: [StorageVirtualIP, ip_address]}
+      StorageIpUri: {get_param: [StorageVirtualIP, ip_address_uri]}
+      StorageMgmtIp: {get_param: [StorageMgmtVirtualIP, ip_address]}
+      StorageMgmtIpUri: {get_param: [StorageMgmtVirtualIP, ip_address_uri]}

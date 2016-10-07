@@ -126,7 +126,7 @@ class Resource:
                 
                 if ((self.grouptype == enum.Grouptypes.ASG) and
                     ('resource' in self.structure['properties']) and
-                    ('type' in self.structure['properties'['resource']])):
+                    ('type' in self.structure['properties']['resource'])):
                     self.type = self.structure['properties']['resource']['type']
                 elif ((self.grouptype == enum.Grouptypes.RG) and
                       ('resource_def' in self.structure['properties']) and

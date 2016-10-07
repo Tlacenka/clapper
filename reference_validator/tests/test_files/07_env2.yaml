@@ -3,3 +3,10 @@
 # File: 07_env2.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
 #        Contains 5 HOT files and 2 environment files
+
+# Mapping of net_ip_map using both environment files
+resource_registry:
+  # TODO complex mapping
+  OS::TripleO::MyNetIpMap: 07_netipmap.yaml
+  OS::TripleO::MyCompute: 07_compute.yaml
+  OS::TripleO::MyController: 07_controller.yaml

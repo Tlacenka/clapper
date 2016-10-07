@@ -1,0 +1,54 @@
+Environments:
+Total: 2
+
+File tests/test_files/07_env1.yaml
+
+Status: OK
+
+
+
+File tests/test_files/07_env2.yaml
+
+Status: OK
+
+
+
+HOT Files:
+Total: 1
+
+File tests/test_files/07_root.yaml
+Parent: None (root)
+
+Resources without reference:
+- Compute
+
+Status: OK
+Mapped HOT Files:
+Total: 3
+
+File 07_netipmap.yaml
+Parent: tests/test_files/07_root.yaml
+
+Status: OK
+
+
+File 07_compute.yaml
+Parent: tests/test_files/07_root.yaml
+
+Unused parameters:
+- GlanceHost
+- KeystonePublicApiVirtualIP
+- NovaPublicIP
+- NovaApiHost
+
+Status: OK
+
+
+File 07_controller.yaml
+Parent: tests/test_files/07_root.yaml
+
+Unused parameters:
+- NetworkMap
+- ServiceMap
+
+Status: OK

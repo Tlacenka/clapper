@@ -1,5 +1,16 @@
 #!/bin/bash
 
-# File: 07_controllergit s.yaml
+# File: 07_controller.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
 #        Contains 5 HOT files and 2 environment files
+
+parameters:
+  NetworkMap:
+    type: json
+  ServiceMap:
+    type: json
+
+
+resource:
+  Endpoint:
+    type: 

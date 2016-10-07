@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# File: 07_netipmap.yaml
+# Brief: Test nr. 7 - Advanced HOT Resolution
+#        Contains 5 HOT files and 2 environment files
+#        This file is based on tripleo-heat-templates/network/ports/net_ip_map.yaml
+
+parameters:
+  ExternalIp:
+    default: ''
+    type: string
+  ExternalIpSubnet:
+    default: ''
+    type: string
+  ExternalIpUri:
+    default: ''
+    type: string
+  InternalApiIp:
+    default: ''
+    type: string
+  InternalApiIpSubnet:
+    default: ''
+    type: string
+  InternalApiIpUri:
+    default: ''
+    type: string
+  ManagementIp:
+    default: ''
+    type: string
+  ManagementIpSubnet:
+    default: ''
+    type: string
+  ManagementIpUri:
+    default: ''
+    type: string
+  StorageIp:
+    default: ''
+    type: string
+  StorageIpSubnet:
+    default: ''
+    type: string
+  StorageIpUri:
+    default: ''
+    type: string
+  StorageMgmtIp:
+    default: ''
+    type: string
+  StorageMgmtIpSubnet:
+    default: ''
+    type: string
+  StorageMgmtIpUri:
+    default: ''
+    type: string
+  TenantIp:
+    default: ''
+    type: string
+  TenantIpSubnet:
+    default: ''
+    type: string
+  TenantIpUri:
+    default: ''
+    type: string
+
+outputs:
+  net_ip_map:
+    value:
+      external: {get_param: ExternalIp}
+      external_subnet: {get_param: ExternalIpSubnet}
+      external_uri: {get_param: ExternalIpUri}
+      internal_api: {get_param: InternalApiIp}
+      internal_api_subnet: {get_param: InternalApiIpSubnet}
+      internal_api_uri: {get_param: InternalApiIpUri}
+      management: {get_param: ManagementIp}
+      management_subnet: {get_param: ManagementIpSubnet}
+      management_uri: {get_param: ManagementIpUri}
+      storage: {get_param: StorageIp}
+      storage_mgmt: {get_param: StorageMgmtIp}
+      storage_mgmt_subnet: {get_param: StorageMgmtIpSubnet}
+      storage_mgmt_uri: {get_param: StorageMgmtIpUri}
+      storage_subnet: {get_param: StorageIpSubnet}
+      storage_uri: {get_param: StorageIpUri}
+      tenant: {get_param: TenantIp}
+      tenant_subnet: {get_param: TenantIpSubnet}
+      tenant_uri: {get_param: TenantIpUri}

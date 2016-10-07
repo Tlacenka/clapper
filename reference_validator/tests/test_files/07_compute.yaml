@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# File: 07_compute.yaml
+# Brief: Test nr. 7 - Advanced HOT Resolution
+#        Contains 5 HOT files and 2 environment files
+
+parameters:
+  GlanceHost:
+    type: string
+  KeystonePublicApiVirtualIP:
+    type: string
+  NovaApiHost:
+    type: string
+  NovaPublicIP:
+    type: string

@@ -40,11 +40,11 @@ TEST05=("Test 5 - Parsing valid HOT with missing instance property structure:" \
 TEST06=("Test 6 - Basic HOT resolution:" \
         "sudo python reference_validator.py -f tests/test_files/06_root.yaml -e tests/test_files/06_env.yaml -u")
 
-#TEST07=("Test 7 - Advanced HOT resolution:" \
-#        "sudo python reference_validator.py -f tests/test_files/07_root.yaml -e tests/test_files/07_env1.yaml -e test_files/07_env2.yaml -u")
+TEST07=("Test 7 - Advanced HOT resolution:" \
+        "sudo python reference_validator.py -f tests/test_files/07_root.yaml -e tests/test_files/07_env1.yaml -e tests/test_files/07_env2.yaml -u")
 
 TESTS=("${TEST01[@]}" "${TEST02[@]}" "${TEST03[@]}" "${TEST04[@]}")
-TESTS+=("${TEST05[@]}" "${TEST06[@]}")
+TESTS+=("${TEST05[@]}" "${TEST06[@]}" "${TEST07[@]}")
 
 TESTS_NR=`expr ${#TESTS[@]} / $ELEMENTS`
 
