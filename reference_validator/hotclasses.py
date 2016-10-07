@@ -32,7 +32,8 @@ class Environment:
 
 class PropertyParameter:
     ''' Class for saving information about parameters and properties.
-        Each parameter and its corresponding property share one. '''
+        Each parameter and its corresponding property share one.
+    '''
 
     def __init__(self, structure, isPar):
         self.name = structure[0]    # name of parameter/property
@@ -53,8 +54,8 @@ class PropertyParameter:
             self.hidden = structure[1]['hidden']
 
     def clone(self):
-        ''' Creates a deep copy of the object,
-            mutable objects such as structure are shared
+        ''' Create a deep copy of the object,
+            mutable objects such as structure are shared.
         '''
         new_propar = PropertyParameter((self.name, None), True)
 
@@ -67,7 +68,7 @@ class PropertyParameter:
         return new_propar
 
     def merge(self, obj):
-        ''' Merges 2 objects, uses attributes of the second object if they are defined.
+        ''' Merge 2 objects, use attributes of the second object if they are defined.
             obj = parameter
         '''
 
@@ -91,7 +92,7 @@ class PropertyParameter:
             self.type = obj.type
 
 class Resource:
-    ''' Stores useful info about resource, its structure. '''
+    ''' Store useful info about resource, its structure. '''
     def __init__(self, name, value, hot):
         self.name = name                    # name of resource variable
         self.structure = value              # resource structure
@@ -123,7 +124,7 @@ class Resource:
             # Type and properties of the individual resource
             if self.isGroup:
                 self.grouptype = self.type
-                
+
                 if ((self.grouptype == enum.Grouptypes.ASG) and
                     ('resource' in self.structure['properties']) and
                     ('type' in self.structure['properties']['resource'])):
@@ -146,14 +147,14 @@ class Resource:
                         self.properties.append(PropertyParameter(prop, False))
 
     def clone(self):
-        ''' Creates a new deep copy of the object,
-            mutable objects such as structure are shared
+        ''' Create a new deep copy of the object,
+            mutable objects such as structure are shared.
         '''
         new_resource = Resource(self.name, self.structure, self.hotfile)
         return new_resource
 
 class InvalidReference:
-    ''' Saves all invalid references for output. In HotFile. '''
+    ''' Save all invalid references for output, used in hotfile. '''
 
     def __init__(self, referent, element, ref_type, parent):
         self.referent = referent # name of referred element

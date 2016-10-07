@@ -8,7 +8,7 @@
 # Date: 2016
 
 class Fonts:
-    ''' Code for formatting output '''
+    ''' Code for formatting output. '''
     BLUE      = '\033[94m'
     GREEN     = '\033[92m'
     YELLOW    = '\033[93m'
@@ -20,7 +20,7 @@ class Fonts:
 
 
 class TreeInfo:
-    ''' Indicators of printed tree nodes '''
+    ''' Indicators of printed tree nodes. '''
     OTHER = 0
     LAST = 1 # Last sibling
     ONLY = 2 # Only one child
@@ -38,12 +38,12 @@ class ErrorTypes:
     ENV_PARAM_DEFAULT = 8 # parameter default value from env file has no match
 
 class Grouptypes:
-    ''' Resource types for groups of resources '''
+    ''' Resource types for groups of resources. '''
     ASG = 'OS::Heat::AutoScalingGroup'
     RG = 'OS::Heat::ResourceGroup'
 
 class GetAttrStates:
-    # Main states for initiating and ending FSM
+    ''' Main states for initiating and ending FSM. '''
     INIT = 0
     RESOLVED = 1
     ERROR = 2
@@ -61,7 +61,7 @@ class GetAttrStates:
     OUTPUT_RESOLUTION = 10 # remaining element(s) as string/dictionary/list
 
 class GetParamStates:
-    # Main states for initiating and ending FSM
+    ''' Main states for initiating and ending FSM. '''
     INIT = 0
     RESOLVED = 1
     ERROR = 2

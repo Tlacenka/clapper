@@ -26,10 +26,10 @@ except ImportError:
     nyanbar = None
 
 class HotValidator:
-    ''' Detects unused variables, invalid references.'''
+    ''' Detect unused variables, invalid references. '''
 
     def __init__(self, arguments):
-        ''' Finds *.yaml files based on entered arguments.
+        ''' Find *.yaml files based on entered arguments.
             arguments - dictionary with parsed arguments and their values
         '''
 
@@ -88,7 +88,9 @@ class HotValidator:
 
 
     def load_environments(self):
-        ''' Goes through all environment files, saves information about them. '''
+        ''' Go through all environment files, saves information about
+            their content.
+        '''
 
         if not self.environments:
             return
@@ -158,7 +160,7 @@ class HotValidator:
 
 
     def add_param_defaults(self):
-        ''' Add default from param_defaults where missing '''
+        ''' Add default from param_defaults where missing. '''
         for env in self.environments:
             for key, value in six.iteritems(env.params_default):
                 found = False
@@ -179,8 +181,8 @@ class HotValidator:
                              '', enum.ErrorTypes.ENV_PARAM_DEFAULT, None))
 
     def add_parameters(self):
-        ''' Add additional parameters from prompt to root template file
-            Add parameter values from environments to root template file
+        ''' Add additional parameters from prompt to root template file.
+            Add parameter values from environments to root template file.
         '''
 
         # Add parameters and values from prompt (-P)
@@ -218,9 +220,9 @@ class HotValidator:
                              '', enum.ErrorTypes.ENV_PARAM, None))
 
     def find_mapping(self, mapping):
-        ''' Searches if there is a mapping with passed side available.
+        ''' Search if there is a mapping with passed side available.
             mapping - left side of mapping
-            returns first found right side of the mapping if found or None
+            return first found right side of the mapping if found or None
         '''
 
         for env in self.environments:
@@ -249,7 +251,7 @@ class HotValidator:
 
 
     def map_resources(self, origin, mapped, env):
-        ''' Finds applicable resources, changes their type.
+        ''' Find applicable resources, changes their type.
             origin - original type
             mapped - mapped type
             env - environment file
@@ -265,7 +267,7 @@ class HotValidator:
                     # Change their type
                     if (origin.startswith('*') and r.type.endswith(origin[1:])):
                         r.type = r.type.replace(origin[1:], mapped[1:])
-                        
+
                     elif (origin.endswith('*') and r.type.startswith(origin[:-1])):
                         r.type = r.type.replace(origin[:-1], mapped[:-1])
 
@@ -274,7 +276,7 @@ class HotValidator:
                     if ret is not None:
                         # If yes, apply mappings (might be that this mapping
                         # has already been realized in apply_mappings)
-                        self.map_resources(r.type, ret[0], ret[1]) 
+                        self.map_resources(r.type, ret[0], ret[1])
 
         # Direct mapping
         else:
@@ -319,11 +321,11 @@ class HotValidator:
                 if ret is not None:
                     # If yes, apply mappings (might be that this mapping
                     # has already been realized in apply_mappings)
-                    self.map_resources(mapped, ret[0], ret[1]) 
+                    self.map_resources(mapped, ret[0], ret[1])
 
 
     def validate_env_params(self):
-        ''' Checks parameters section of environment files. '''
+        ''' Check parameters section of environment files. '''
 
         # Check parameters section
         for env in self.environments:
@@ -361,7 +363,7 @@ class HotValidator:
 
 
     def validate_references(self, root):
-        ''' Validates references in file '''
+        ''' Validate references in file. '''
 
         # Validate parent
         root.validate_file(self.curr_nodes)
@@ -374,7 +376,7 @@ class HotValidator:
                 self.validate_references(resource.child)
 
     def print_tree(self, root, root_position, indent, branch_list):
-        ''' Prints tree structure of templates '''
+        ''' Print tree structure of templates. '''
 
         # Print higher branches
         if (len(branch_list) and (root_position != enum.TreeInfo.ONLY)):
@@ -430,7 +432,7 @@ class HotValidator:
 
 
     def run(self):
-        ''' Runs validator '''
+        ''' Run validator. '''
 
         # Initialize nyanbar
         if self.print_nyan:
@@ -503,7 +505,7 @@ class HotValidator:
 
 
     def print_output(self):
-        ''' Prints results of validation for all files + additional info. '''
+        ''' Print results of validation for all files + additional info. '''
 
         # Environments
         if self.environments:
@@ -575,7 +577,7 @@ class HotValidator:
         # HOT Files and mappings
         # TODO: Print as DFS, rather going through the tree instead of the list
         for hot in [x for x in [self.templates, self.mappings] if len(x)]:
-            
+
             if self.pretty_format:
                 print(enum.Fonts.ORANGE + enum.Fonts.BOLD + enum.Fonts.UNDERLINE +
                       ('HOT Files:' if hot == self.templates else 'Mapped HOT Files:') +
@@ -599,7 +601,7 @@ class HotValidator:
                 # Print title
                 if self.pretty_format:
                     print(enum.Fonts.BOLD + enum.Fonts.UNDERLINE + 'File ' +
-                          enum.Fonts.BLUE + os.path.relpath(node.path, self.init_dir) + 
+                          enum.Fonts.BLUE + os.path.relpath(node.path, self.init_dir) +
                           enum.Fonts.DEFAULT)
                 else:
                     print('File ' + os.path.relpath(node.path, self.init_dir))
@@ -707,7 +709,7 @@ class HotValidator:
                               enum.Fonts.DEFAULT)
                     else:
                         print('Hidden parameters:')
-                    
+
                     for par in node.params:
                         if par.hidden:
                             if self.pretty_format:
@@ -715,7 +717,7 @@ class HotValidator:
                             else:
                                 print('- ' + par.name)
                     print('')
-                
+
                 # Print unused resources (optional)
                 if (self.print_unused) and [True for x in node.resources if not x.used]:
                     if (self.pretty_format):

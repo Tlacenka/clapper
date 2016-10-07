@@ -41,8 +41,8 @@ class HotFile:
 
 
     def clone_file(self, new_parent):
-        ''' Clones file, optionally adds new parent straight away,
-            mutable objects such as structure are shared
+        ''' Clone file, optionally adds new parent straight away,
+            mutable objects such as structure are shared.
         '''
         new_file = HotFile(new_parent, self.path)
 
@@ -60,7 +60,7 @@ class HotFile:
         return new_file
 
     def load_file(self, curr_nodes, templates, environments, curr_path):
-        ''' Validates YAML file. '''
+        ''' Validate YAML file. '''
 
         # Add current node at the beginning
         curr_nodes.append(self)
@@ -112,7 +112,7 @@ class HotFile:
 
 
     def validate_file(self, curr_nodes):
-        ''' After loading information, validates references in file.'''
+        ''' After loading information, validate references in file. '''
 
         # Add current node at the beginning
         curr_nodes.append(self)
@@ -141,7 +141,7 @@ class HotFile:
         ''' Check if all references to variables are valid.
             name       - name of referring instance
             structure - structure containing instance properties and their values
-            
+
         '''
 
         if isinstance(structure, list):
@@ -170,7 +170,7 @@ class HotFile:
 
 
     def get_param(self, hierarchy, name):
-        ''' Validates get_param
+        ''' Validate get_param.
             hierarchy - reference
             name - instance name
         '''
@@ -322,7 +322,7 @@ class HotFile:
 
 
     def get_resource(self, hierarchy, name):
-        ''' Validates get_resource
+        ''' Validate get_resource.
             hierarchy - reference
             name - instance name
         '''
@@ -340,7 +340,7 @@ class HotFile:
 
 
     def get_attr(self, hierarchy, name):
-        ''' Validates get_attr
+        ''' Validate get_attr.
             hierarchy - reference
             name - instance name
         '''
@@ -418,12 +418,12 @@ class HotFile:
                             # No more elements found - TODO: is it invalid?
                             next_state = enum.GetAttrStates.ERROR
                             continue
-                        
+
                         if type(hierarchy[index]) == dict:
                             element = self.resolve_nested(hierarchy[index], name)
                         else:
                             element = hierarchy[index]
-                        
+
                         if element is None:
                             next_state = enum.GetAttrStates.ERROR
                         elif type(element) == str:
@@ -432,7 +432,7 @@ class HotFile:
                                 (element == 'attributes')):
                                 index = index + 1
                                 next_state = enum.GetAttrStates.RG_ATTRIBUTES
-                            
+
                             # 'outputs_list'
                             elif ((resource.grouptype == enum.Grouptypes.ASG) and
                                   (element == 'outputs_list')):
@@ -446,7 +446,7 @@ class HotFile:
                             # 'resource.<name>', 'resource.<number>' or 'resource.<number>.<name>'
                             elif element.startswith('resource.'):
                                 tmp = element.split('.')
-                                
+
                                 # resource.<number>.<ref> or resource.<number>
                                 if ((resource.grouptype == enum.Grouptypes.RG) and
                                     ((len(tmp) == 3) or (len(tmp) == 2)) and
@@ -560,18 +560,18 @@ class HotFile:
                     next_state = enum.GetAttrStates.ERROR
                 else:
                     next_state = enum.GetAttrStates.OUTPUT_NAME
-                
+
 
     def resolve_nested(self, nested_element, name):
-        ''' Checks format, tries to resolve element.
-            Returns its value upon success, None upon failure.
+        ''' Check format, tries to resolve element.
+            Return its value upon success, None upon failure.
             nested_element - dictionary
             name - instance name
         '''
 
         if len(nested_element) == 1:
             # Resolve nested element
-            return self.classify_items(nested_element.keys()[0], 
+            return self.classify_items(nested_element.keys()[0],
                     nested_element.values()[0], name)
         else:
             # Not a get_function format
@@ -602,8 +602,8 @@ class HotFile:
                                             enum.ErrorTypes.MISS_PROP, parent.path))
                         self.ok = False
                         break
-            
-                
+
+
             # Missing parameter for property
             if not found:
                 for p in resource.properties:
@@ -623,7 +623,7 @@ class HotFile:
 
 
     def depends_on(self):
-        ''' Sets resources which other resources depend on as used '''
+        ''' Set resources which other resources depend on as used. '''
 
         for r in self.resources:
             if (r.structure is not None) and ('depends_on' in r.structure):
