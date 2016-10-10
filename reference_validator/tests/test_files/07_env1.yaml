@@ -7,4 +7,16 @@
 # Mapping of net_ip_map using both environment files
 
 resource_registry:
-  #TODO Mapping
+  # Wildcards
+  "OS::MyTripleO*": "OS::AwesomeTripleO*"
+  "OS::GreatTripleO*": "OS::TripleO*"
+
+  "*MyCompute": "*Compute"
+
+  # Direct mapping
+  OS::TripleO::NetIpMap: OS::TripleO::Network::NetIpMap
+
+  OS::TripleO::Network::Ports::NetIpMap: 07_netipmap.yaml
+  OS::TripleO::Controller: 07_controller.yaml
+ 
+  

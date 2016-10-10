@@ -77,7 +77,7 @@ resources:
     
       count: {get_param: ControllerCount}
       resource_def:
-        type: OS::TripleO::MyController
+        type: OS::MyTripleO::Controller
         properties:
           # gets value from 07_netipmap.yaml
           NetworkMap: {get_attr: [NetIpMap, net_ip_map]}
@@ -100,7 +100,7 @@ resources:
           NovaPublicIP: {get_attr: [NetIpMap, net_ip_map, external]}
 
   NetIpMap:
-    type: OS::TripleO::MyNetIpMap
+    type: OS::MyTripleO::NetIpMap
     properties:
       ExternalIp: {get_param: [PublicVirtualIP, ip_address]}
       ExternalIpUri: {get_param: [PublicVirtualIP, ip_address_uri]}

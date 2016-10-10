@@ -219,110 +219,99 @@ class HotValidator:
                         env.invalid.append(hotclasses.InvalidReference(key,
                              '', enum.ErrorTypes.ENV_PARAM, None))
 
-    def find_mapping(self, mapping):
+    def search_mapping(self, mapping):
         ''' Search if there is a mapping with passed side available.
             mapping - left side of mapping
-            return first found right side of the mapping if found or None
+            return tuple (original type in env file, mapped type)
         '''
 
         for env in self.environments:
             for origin, mapped in six.iteritems(env.resource_registry):
-                if origin == mapping:
-                    return (mapped, env)
+                # Cover both direct and wildcard mapping
+                # Both new resource type and origin may use wildcards
+                if ((origin == mapping) or
+                   (origin.startswith('*') and mapping.endswith(origin[1:])) or
+                   (mapping.startswith('*') and origin.endswith(origin[1:])) or
+                   (origin.endswith('*') and mapping.startswith(origin[:-1])) or
+                   (mapping.endswith('*') and origin.startswith(origin[:-1]))):
+                    return (origin, mapped)
         return None
 
-    #def map_2search(self, root):
-        #''' Go through mappings, apply to templates using DFS'''
-        #for env in self.environments:
-            #for origin, mapped in six.iteritems(env.resource_registry):
-                #for r in root.resources:
-                    #self.map_2apply(r, origin, mapped)
-    # TODO: go through the template tree, try to apply wildcard mapping
-        #       and direct mapping after that, create clone mappings
-        #       on the way
-
-    def apply_mappings(self):
-        ''' Add all files mapped to resources as children in parent node. '''
-
-        # Try to find resources for every mapping in the resource registry
-        for env in self.environments:
-            for origin, mapped in six.iteritems(env.resource_registry):
-                self.map_resources(origin, mapped, env)
-
-
-    def map_resources(self, origin, mapped, env):
-        ''' Find applicable resources, changes their type.
-            origin - original type
-            mapped - mapped type
-            env - environment file
+    def add_mappings(self, root):
+        ''' Go through mappings, apply to templates using DFS.
+            root - root node in current subtree
         '''
 
-        # Wildcard
+        for r in root.resources:
+            for env in self.environments:
+                for origin, mapped in six.iteritems(env.resource_registry):
+                    self.apply_mapping(r, origin, mapped)
+
+            # If child node is found, resolve mapping for it
+            if r.child is not None:
+                self.add_mappings(r.child)
+
+    def apply_mapping(self, resource, origin, mapped):
+        ''' Try to apply mapping.
+            resource - resource node to be checked
+            origin - current origin type
+            mapped - current mapped type '''
+
+        # Wildcard mapping
         if '*' in origin:
 
-            # Find all resources corresponding to the wildcard
-            for hot in self.templates + self.mappings:
-                for r in hot.resources:
+            # Change its type
+            if (origin.startswith('*') and resource.type.endswith(origin[1:])):
+                resource.type = resource.type.replace(origin[1:], mapped[1:])
 
-                    # Change their type
-                    if (origin.startswith('*') and r.type.endswith(origin[1:])):
-                        r.type = r.type.replace(origin[1:], mapped[1:])
+            elif (origin.endswith('*') and resource.type.startswith(origin[:-1])):
+                resource.type = resource.type.replace(origin[:-1], mapped[:-1])
 
-                    elif (origin.endswith('*') and r.type.startswith(origin[:-1])):
-                        r.type = r.type.replace(origin[:-1], mapped[:-1])
+            # Find out if newly mapped resources have other applicable mappings
+            ret = self.search_mapping(resource.type)
 
-                    # Find out if newly mapped resources have other applicable mappings
-                    ret = self.find_mapping(r.type)
-                    if ret is not None:
-                        # If yes, apply mappings (might be that this mapping
-                        # has already been realized in apply_mappings)
-                        self.map_resources(r.type, ret[0], ret[1])
+            # If yes, apply mapping
+            if ret is not None:
+                self.apply_mapping(resource, ret[0], ret[1])
 
         # Direct mapping
-        else:
+        elif ((resource.type == origin) and
+             ((type(mapped) == str) or (mapped[1] == resource.name))):
 
+            # Finds mapped file if the mapping is designated for the resource
             found = False
-            # Find all corresponding resources
-            for hot in self.templates + self.mappings:
-                for r in hot.resources:
 
-                    if r.child is not None:
-                        continue
+            # Other nonYAML type
+            if (type(mapped) == str) and (not mapped.endswith('.yaml')):
+                resource.type = mapped
+                found = True
 
-                    # Finds mapped file if the mapping is designated for the resource
-                    if ((r.type == origin) and
-                        ((type(mapped) == str) or (mapped[1] == r.name))):
+            # Find mapped YAML file/other type, assign it to the resource
+            else:
+                for m in self.mappings:
 
-                        # Find mapped YAML file/other type, assign it to the resource
-                        for m in self.mappings:
+                    if (((type(mapped) == str) and (m.path == mapped)) or
+                        ((type(mapped) == list) and (m.path == mapped[0]))):
 
-                            # Other nonYAML type
-                            if (type(mapped) == str) and (not mapped.endswith('.yaml')):
-                                r.type = mapped
-                                found = True
+                        # If it is already mapped somewhere, create a clone
+                        if m.parent not in self.environments:
+                            self.mappings.append(m.clone_file(resource.hotfile))
+                            resource.child = self.mappings[-1]
+                        else:
+                            m.parent = resource.hotfile
+                            resource.child = m
 
-                            # YAML mapping
-                            # TODO: create mapping clones for mappings applied multiple times!
-                            elif (((type(mapped) == str) and (m.path == mapped)) or
-                                ((type(mapped) == list) and (m.path == mapped[0]))):
-                                # If it is already mapped somewhere, create a clone
-                                if m.parent != env:
-                                    self.mappings.append(m.clone_file(r.hotfile))
-                                    r.child = self.mappings[-1]
-                                else:
-                                    m.parent = r.hotfile
-                                    r.child = m
-                                r.type = mapped
-                                found = True
-                                break
+                        resource.type = mapped
+                        found = True
+                        break
 
             if found:
-                ret = self.find_mapping(mapped)
-                if ret is not None:
-                    # If yes, apply mappings (might be that this mapping
-                    # has already been realized in apply_mappings)
-                    self.map_resources(mapped, ret[0], ret[1])
+                # Find other applicable mapping
+                ret = self.search_mapping(mapped)
 
+                # If found, apply mapping
+                if ret is not None:
+                    self.apply_mapping(resource, ret[0], ret[1])
 
     def validate_env_params(self):
         ''' Check parameters section of environment files. '''
@@ -475,7 +464,7 @@ class HotValidator:
 
         # Also add mapped files as children once there is a full structure of files
         # (if done earlier, some mapped types used in mapped files could be skipped)
-        self.apply_mappings()
+        self.add_mappings(self.templates[0])
 
         # Check environment parameters against fully loaded HOT structure
         self.validate_env_params()
