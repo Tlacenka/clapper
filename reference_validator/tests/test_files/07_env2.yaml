@@ -5,6 +5,11 @@
 #        Contains 5 HOT files and 2 environment files
 
 # Mapping of net_ip_map using both environment files
+
+parameters:
+  ControllerCount: 1
+  ComputeCount: 1
+
 resource_registry:
 
 

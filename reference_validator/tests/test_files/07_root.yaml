@@ -10,16 +10,12 @@
 
 parameters:
 
+  # from env2
   ControllerCount:
     type: number
-    default: 1
-    constraints:
-      - range: {min: 1}
+
   ComputeCount:
     type: number
-    default: 1
-    constraints:
-      - range: {min: 1}
 
   # ServiceNetMap from overcloud.yaml
   ServiceNetMap:
@@ -46,27 +42,12 @@ parameters:
       CephStorageHostnameResolveNetwork: storage
     type: json
 
-  # Parameters for NetIpMap
-  PublicVirtualIP:
-    default:
-      ip_address: 127.0.0.1
-      ip_address_uri: 127.0.0.1
+  # Used in controller in get_attr
+  MapNames:
     type: json
-  InternalApiVirtualIP:
     default:
-      ip_address: 127.0.0.2
-      ip_address_uri: 127.0.0.2
-    type: json
-  StorageVirtualIP:
-    default:
-      ip_address: 127.0.0.3
-      ip_address_uri: 127.0.0.3
-    type: json
-  StorageMgmtVirtualIP:
-    default:
-      ip_address: 127.0.0.4
-      ip_address_uri: 127.0.0.4
-    type: json
+      NetMap: net_ip_map
+      ServiceNetMap: service_net_map
 
 resources:
 
@@ -80,8 +61,8 @@ resources:
         type: OS::MyTripleO::Controller
         properties:
           # gets value from 07_netipmap.yaml
-          NetworkMap: {get_attr: [NetIpMap, net_ip_map]}
           ServiceMap: {get_param: ServiceNetMap}
+          MapNames: {get_param: MapNames}
 
   # Usage of ASG
   Compute:
@@ -93,20 +74,11 @@ resources:
         type: OS::TripleO::MyCompute
         properties:
           #Flavor: {get_param: OvercloudComputeFlavor}
-          GlanceHost: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
+          GlanceHost: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
           #Image: {get_param: NovaImage}
-          KeystonePublicApiVirtualIP: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
-          NovaApiHost: {get_attr: [NetIpMap, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
-          NovaPublicIP: {get_attr: [NetIpMap, net_ip_map, external]}
+          KeystonePublicApiVirtualIP: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
+          NovaApiHost: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
+          NovaPublicIP: {get_attr: [Controller, net_ip_map, external]}
+          NetIpMap: {get_attr: [Controller, net_ip_map]}
 
-  NetIpMap:
-    type: OS::MyTripleO::NetIpMap
-    properties:
-      ExternalIp: {get_param: [PublicVirtualIP, ip_address]}
-      ExternalIpUri: {get_param: [PublicVirtualIP, ip_address_uri]}
-      InternalApiIp: {get_param: [InternalApiVirtualIP, ip_address]}
-      InternalApiIpUri: {get_param: [InternalApiVirtualIP, ip_address_uri]}
-      StorageIp: {get_param: [StorageVirtualIP, ip_address]}
-      StorageIpUri: {get_param: [StorageVirtualIP, ip_address_uri]}
-      StorageMgmtIp: {get_param: [StorageMgmtVirtualIP, ip_address]}
-      StorageMgmtIpUri: {get_param: [StorageMgmtVirtualIP, ip_address_uri]}
+  

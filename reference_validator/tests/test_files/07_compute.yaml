@@ -13,3 +13,12 @@ parameters:
     type: string
   NovaPublicIP:
     type: string
+  NetIpMap:
+    type: json
+
+resources:
+  XYZ:
+    type: OS::TripleO::Nova::Server
+    properties:
+      # getting value of net_ip_map in netipmap.yaml > controller > root > compute
+      NetMap: {get_param: NetIpMap}

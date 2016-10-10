@@ -5,12 +5,48 @@
 #        Contains 5 HOT files and 2 environment files
 
 parameters:
-  NetworkMap:
-    type: json
   ServiceMap:
     type: json
+  MapNames:
+    type: json
 
+  # Parameters for NetIpMap
+  PublicVirtualIP:
+    default:
+      ip_address: 127.0.0.1
+      ip_address_uri: 127.0.0.1
+    type: json
+  InternalApiVirtualIP:
+    default:
+      ip_address: 127.0.0.2
+      ip_address_uri: 127.0.0.2
+    type: json
+  StorageVirtualIP:
+    default:
+      ip_address: 127.0.0.3
+      ip_address_uri: 127.0.0.3
+    type: json
+  StorageMgmtVirtualIP:
+    default:
+      ip_address: 127.0.0.4
+      ip_address_uri: 127.0.0.4
+    type: json
 
-resource:
-  Endpoint:
-    type: 
+resources:
+
+  NetIpMap:
+    type: OS::MyTripleO::NetIpMap
+    properties:
+      ExternalIp: {get_param: [PublicVirtualIP, ip_address]}
+      ExternalIpUri: {get_param: [PublicVirtualIP, ip_address_uri]}
+      InternalApiIp: {get_param: [InternalApiVirtualIP, ip_address]}
+      InternalApiIpUri: {get_param: [InternalApiVirtualIP, ip_address_uri]}
+      StorageIp: {get_param: [StorageVirtualIP, ip_address]}
+      StorageIpUri: {get_param: [StorageVirtualIP, ip_address_uri]}
+      StorageMgmtIp: {get_param: [StorageMgmtVirtualIP, ip_address]}
+      StorageMgmtIpUri: {get_param: [StorageMgmtVirtualIP, ip_address_uri]}
+
+outputs:
+  net_ip_map:
+    # Searches for parameter structure name in root
+    value: {get_attr: [NetIpMap, {get_param: [MapNames, NetMap]}]}
