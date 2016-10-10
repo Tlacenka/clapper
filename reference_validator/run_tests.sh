@@ -63,9 +63,14 @@ function run_test() {
         printf "${1} ${GREEN}OK${DEFAULT}\n"
     else
         printf "${1} ${RED}FAILED${DEFAULT}\n"
+
+        # Print diff output if verbose option is set
         if [ "$VERBOSE" = true ]
         then
-            >&2 echo "$OUTPUT"
+            # yellow - current (unexpected) output
+            # red - expected output that is missing
+            echo "$OUTPUT" 2>&1 | GREP_COLOR='01;33' egrep --color=always '<|$' \
+                                | GREP_COLOR='01;31' egrep -i --color=always '>|$'
         fi
     fi
 
@@ -94,8 +99,6 @@ do
     esac
     shift # past argument or value
 done
-
-# Remove log files if they exist
 
 # Run tests in loop
 printf "${BOLD}Running YAML reference validator tests${DEFAULT}\n"
