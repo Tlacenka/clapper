@@ -17,6 +17,7 @@ DEFAULT=$(tput sgr0)
 TESTS=()
 ELEMENTS=2
 CLEAN=false # Remove logs afterwards
+VERBOSE=false # prints diff if test failed
 
 LOG_DIR=tests/test_logs
 DIFF_DIR=tests/test_diffs
@@ -62,17 +63,37 @@ function run_test() {
         printf "${1} ${GREEN}OK${DEFAULT}\n"
     else
         printf "${1} ${RED}FAILED${DEFAULT}\n"
+        if [ "$VERBOSE" = true ]
+        then
+            >&2 echo "$OUTPUT"
+        fi
     fi
 
 }
 
 # Main
 
-# Setting -c parameter
-if [[ "$1" = "-c" ]]
-then
-   CLEAN=true
-fi
+# Parse arguments
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+
+    case $key in
+        -v|--verbose)
+        VERBOSE=true
+        ;;
+
+        -c|--clean)
+        CLEAN=true
+        ;;
+
+        *)
+            >&2 echo "Unknown argument."
+            exit 1
+        ;;
+    esac
+    shift # past argument or value
+done
 
 # Remove log files if they exist
 
