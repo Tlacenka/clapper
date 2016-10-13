@@ -19,10 +19,12 @@ Total: 1
 File tests/test_files/07_root.yaml
 Parent: None (root)
 
-Resources without reference:
-- Compute
+Invalid references:
+Instance attributes referred by get_attr in wrong_grouptype - output of Compute is not declared.
+Instance no_other_structure referred by get_attr in EndpointMap - output of Controller is not declared.
+Instance resource.nonexistent_resource referred by get_attr in EndpointMap - output of Controller is not declared.
 
-Status: OK
+Status: FAILED
 Mapped HOT Files:
 Total: 3
 
@@ -48,10 +50,9 @@ Invalid references:
 Parameter nonexistent_api referred in NovaServer is not declared.
 
 Unused parameters:
+- NovaApiHost
 - GlanceHost
 - KeystonePublicApiVirtualIP
-- NovaPublicIP
-- NovaApiHost
 
 Resources without reference:
 - NovaServer

@@ -2,12 +2,10 @@
 
 # File: 07_root.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
-#        Contains 5 HOT files and 2 environment files
+#        Contains 4 HOT files and 2 environment files
 
 # - resolution across 4 YAML files
 # - resolution with more nested elements, both get_param and get_attr
-# - TODO: RG and ASG stuff, getting resource via all sorts of keywords
-# - TODO: remove duplicate error messages when there is an error in get_ with nested structure
 
 parameters:
 
@@ -62,7 +60,7 @@ resources:
         properties:
           MapNames: {get_param: MapNames}
           ServiceMap: {get_param: ServiceNetMap}
-          
+
 
   # Usage of ASG
   Compute:
@@ -81,4 +79,43 @@ resources:
           NovaPublicIP: {get_attr: [Controller, net_ip_map, external]}
           NetIpMap: {get_attr: [Controller, net_ip_map]}
 
-  
+  # resource without YAML file
+  EndpointMap:
+    type: OS::TripleO::EndpointMap
+    properties:
+      # resolution in RG using attributes keyword
+      public_virtual_ip: {get_attr: [Controller, attributes, public_virtual_ip]}
+
+      # resolution in ASG using outputs keyword
+      nova_public_ip: {get_attr: [Compute, outputs, nova_public_ip]}
+
+      # resolution in ASG using resource.<alnum string>.<name>
+      management_subnet: {get_attr: [Compute, resource.randomstring123.nova_info, port]}
+
+      # ERROR: trying to resolve nonexistent value in a structure
+      nonexistent_structure: {get_attr: [Controller, public_virtual_ip, no_other_structure]}
+
+      # ERROR: trying to get a nonexistent resource from Compute
+      compute_resource: {get_attr: [Controller, resource.nonexistent_resource]}
+
+outputs:
+  nova_server:
+    # resolution using resource.<name>
+    value: {get_attr: [Compute, resource.NovaServer]}
+
+  net_ip_map:
+    # resolution in RG using resource.<number>.<name>
+    value: {get_attr: [Controller, resource.0.net_ip_map]}
+
+  untrackable_value:
+    # if get_attr refers to resource without available file, it is ok by default
+    value: {get_attr: [EndpointMap, some_output]}
+
+  compute_outputs:
+    # resolution in ASG using outputs_list keyword
+    value: {get_attr: [Compute, outputs_list]}
+
+  wrong_grouptype:
+    # ERROR: using attributes in ASG
+    value: {get_attr: [Compute, attributes]}
+

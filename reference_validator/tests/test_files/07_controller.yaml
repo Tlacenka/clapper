@@ -2,7 +2,7 @@
 
 # File: 07_controller.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
-#        Contains 5 HOT files and 2 environment files
+#        Contains 4 HOT files and 2 environment files
 
 parameters:
   ServiceMapName:
@@ -58,3 +58,9 @@ outputs:
 
   service_map_name:
     value: {get_param: ServiceMapName}
+
+  net_ip_map_resource:
+    value: {get_resource: NetIpMap}
+
+  public_virtual_ip:
+    value: {get_param: [PublicVirtualIP, ip_address]}

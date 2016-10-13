@@ -51,7 +51,7 @@ resources:
       min_size:
       max_size:
       resource:
-      
+
 
 outputs:
   output1:

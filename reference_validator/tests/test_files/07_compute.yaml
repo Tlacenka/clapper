@@ -2,7 +2,7 @@
 
 # File: 07_compute.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
-#        Contains 5 HOT files and 2 environment files
+#        Contains 4 HOT files and 2 environment files
 
 parameters:
   GlanceHost:
@@ -15,6 +15,14 @@ parameters:
     type: string
   NetIpMap:
     type: json
+  NovaInfo:
+    type: json
+    default:
+      internal: NovaApi
+      access: Public
+      admin: NovaApi
+      port: 8777
+
 
 resources:
   NovaServer:
@@ -27,3 +35,9 @@ resources:
 
       # ERROR: parameter nonexistent_api does not exist
       NonExistentApi: {get_param: [NetIpMap, nonexistent_api]}
+
+outputs:
+  nova_public_ip:
+    value: {get_param: NovaPublicIP}
+  nova_info:
+    value: {get_param: NovaInfo}

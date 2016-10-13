@@ -32,7 +32,7 @@ parameters:
       ControllerProxyNetwork: storage
       ControllerHostnameResolveNetwork: internal_api
     type: json
-  
+
   # WARNING: Unused parameter
   RandomParameter:
     description: Unused parameter

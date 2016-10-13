@@ -18,5 +18,5 @@ resource_registry:
 
   OS::TripleO::Network::Ports::NetIpMap: 07_netipmap.yaml
   OS::TripleO::Controller: 07_controller.yaml
- 
-  
+
+

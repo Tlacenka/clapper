@@ -2,7 +2,7 @@
 
 # File: 07_netipmap.yaml
 # Brief: Test nr. 7 - Advanced HOT Resolution
-#        Contains 5 HOT files and 2 environment files
+#        Contains 4 HOT files and 2 environment files
 #        This file is based on tripleo-heat-templates/network/ports/net_ip_map.yaml
 
 parameters:
