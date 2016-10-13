@@ -4,9 +4,10 @@
 # Brief: Test nr. 7 - Advanced HOT Resolution
 #        Contains 5 HOT files and 2 environment files
 
-# TODO: resolution across at least 3 YAML files (get_param > peroperty value is get_attr)
-#       RG and ASG stuff, getting resource via all sorts of keywords
-#       
+# - resolution across 4 YAML files
+# - resolution with more nested elements, both get_param and get_attr
+# - TODO: RG and ASG stuff, getting resource via all sorts of keywords
+# - TODO: remove duplicate error messages when there is an error in get_ with nested structure
 
 parameters:
 
@@ -40,8 +41,6 @@ parameters:
       ObjectStorageHostnameResolveNetwork: internal_api
       SwiftMgmtNetwork: storage_mgmt
       SwiftProxyNetwork: storage
-      
-      
     type: json
 
   # Used in controller in get_attr
@@ -57,7 +56,6 @@ resources:
   Controller:
     type: OS::Heat::ResourceGroup
     properties:
-    
       count: {get_param: ControllerCount}
       resource_def:
         type: OS::MyTripleO::Controller
@@ -75,9 +73,9 @@ resources:
       resource:
         type: OS::TripleO::MyCompute
         properties:
-          #Flavor: {get_param: OvercloudComputeFlavor}
-          GlanceHost: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
-          #Image: {get_param: NovaImage}
+          # resolution with two nested get_ functions
+          GlanceHost: {get_attr: [Controller, net_ip_map, {get_param: [{get_attr: [Controller, service_map_name]}, GlanceApiNetwork]}]}
+
           KeystonePublicApiVirtualIP: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
           NovaApiHost: {get_attr: [Controller, net_ip_map, {get_param: [ServiceNetMap, NovaApiNetwork]}]}
           NovaPublicIP: {get_attr: [Controller, net_ip_map, external]}

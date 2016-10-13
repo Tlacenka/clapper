@@ -44,6 +44,9 @@ Status: OK
 File 07_compute.yaml
 Parent: tests/test_files/07_root.yaml
 
+Invalid references:
+Parameter nonexistent_api referred in NovaServer is not declared.
+
 Unused parameters:
 - GlanceHost
 - KeystonePublicApiVirtualIP
@@ -51,6 +54,6 @@ Unused parameters:
 - NovaApiHost
 
 Resources without reference:
-- XYZ
+- NovaServer
 
-Status: OK
+Status: FAILED

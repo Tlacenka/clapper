@@ -52,6 +52,7 @@ Testing is realized by executing a script called `run_tests.sh` which is located
 
 <h3> Usage </h3>
 
-    $ ./run_tests.sh [-c]
+    $ ./run_tests.sh [-c] [-v]
 
   - ``-c`` when selected, log files are automatically removed after the testing process is finished
+  - ``-v`` when selected, diff between expected and actual output is included directly in the test script output

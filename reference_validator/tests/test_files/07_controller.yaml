@@ -5,10 +5,9 @@
 #        Contains 5 HOT files and 2 environment files
 
 parameters:
-  ServiceMap:
-    type: json
-  MapNames:
-    type: json
+  ServiceMapName:
+    type: string
+    default: ServiceNetMap
 
   # Parameters for NetIpMap
   PublicVirtualIP:
@@ -32,6 +31,12 @@ parameters:
       ip_address_uri: 127.0.0.4
     type: json
 
+  # WARNING: unused parameter
+  ServiceMap:
+    type: json
+  MapNames:
+    type: json
+
 resources:
 
   NetIpMap:
@@ -50,3 +55,6 @@ outputs:
   net_ip_map:
     # Searches for parameter structure name in root
     value: {get_attr: [NetIpMap, {get_param: [MapNames, NetMap]}]}
+
+  service_map_name:
+    value: {get_param: ServiceMapName}

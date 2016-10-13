@@ -17,8 +17,13 @@ parameters:
     type: json
 
 resources:
-  XYZ:
+  NovaServer:
     type: OS::TripleO::Nova::Server
     properties:
-      # getting value of net_ip_map in netipmap.yaml > controller > root > compute
-      NetMap: {get_param: NetIpMap}
+      # getting value of net_ip_map - internal_api in netipmap.yaml
+      # resolution goes from netipmap to controller > root > compute
+      # resolution uses get_param inside get_attr
+      NetMap: {get_param: [NetIpMap, internal_api]}
+
+      # ERROR: parameter nonexistent_api does not exist
+      NonExistentApi: {get_param: [NetIpMap, nonexistent_api]}
