@@ -185,6 +185,8 @@ class HotFile:
         element = None   # value of current element (string)
         index = 0        # index of current element
 
+        #print('get_param', hierarchy, self.path)
+
         while True:
 
             # State transition
@@ -213,6 +215,8 @@ class HotFile:
             elif cur_state == enum.GetParamStates.RESOLVED:
                 if parameter is not None:
                     parameter.used = True
+                #if value is not None:
+                #    print("get_param resolved", hierarchy, value)
                 return (value if (value is not None) else element)
 
             # Find parameter
@@ -232,6 +236,7 @@ class HotFile:
 
                 if element is None:
                     next_state = enum.GetParamStates.ERROR
+                    #print("Error 1")
                     continue
 
                 elif type(element) == str:
@@ -243,6 +248,7 @@ class HotFile:
                 if parameter is None:
                     # Parameter was not found
                     next_state = enum.GetParamStates.ERROR
+                    #print("Error 2")
                 else:
                     # Go to parameter value resolution
                     next_state = enum.GetParamStates.PARAM_VALUE
@@ -277,6 +283,7 @@ class HotFile:
                         continue
                     else:
                         next_state = enum.GetParamStates.ERROR
+                        #print("Error 3", parameter.name, hierarchy)
                         continue
 
                 if type(hierarchy) == str:
@@ -303,6 +310,7 @@ class HotFile:
 
                 if element is None:
                     next_state = enum.GetParamStates.ERROR
+                    #print("Error 4")
 
                 elif ((type(element) == str) and (type(value) == dict) and
                       (element in value.keys())):
@@ -319,6 +327,7 @@ class HotFile:
                 else:
                     # element can only be string or digit
                     next_state = enum.GetParamStates.ERROR
+                    #print("Error 5")
 
 
     def get_resource(self, hierarchy, name):
@@ -345,6 +354,8 @@ class HotFile:
             name - instance name
         '''
 
+        #print("get_attr", hierarchy, self.path)
+
         # main variables: cur_state, next_state, value
         cur_state = enum.GetAttrStates.INIT
         next_state = enum.GetAttrStates.INIT
@@ -365,10 +376,12 @@ class HotFile:
                 if (type(hierarchy) == list) and (len(hierarchy) > 1):
                     next_state = enum.GetAttrStates.RESOURCE_NAME
                 else:
+                    #print('error 0')
                     next_state = enum.GetAttrStates.ERROR
 
             # End unsuccessfully, add invalid reference
             elif cur_state == enum.GetAttrStates.ERROR:
+                #print("error exit", element)
                 if type(hierarchy) == list:
                     self.invalid.append(hotclasses.InvalidReference(str(hierarchy[index]),
                                 name + ' - output of ' + str(hierarchy[0]),
@@ -384,6 +397,7 @@ class HotFile:
             # End successfully
             elif cur_state == enum.GetAttrStates.RESOLVED:
                 resource.used = True
+                #print("get_attr resolved", hierarchy, value)
                 return value
 
             # Resolve first element and its value, choose next state
@@ -396,6 +410,7 @@ class HotFile:
 
                 if element is None:
                     next_state = enum.GetAttrStates.ERROR
+                    #print("error 1")
 
                 elif type(element) == str:
                     for r in self.resources:
@@ -406,6 +421,7 @@ class HotFile:
                     # Resource not found
                     if resource is None:
                         next_state = enum.GetAttrStates.ERROR
+                        #print("error 2")
 
                     # Resource does not have a dedicated YAML file
                     elif resource.child is None:
@@ -417,6 +433,7 @@ class HotFile:
                         if index >= len(hierarchy):
                             # No more elements found - TODO: is it invalid?
                             next_state = enum.GetAttrStates.ERROR
+                            #print("error 3")
                             continue
 
                         if type(hierarchy[index]) == dict:
@@ -426,6 +443,7 @@ class HotFile:
 
                         if element is None:
                             next_state = enum.GetAttrStates.ERROR
+                            #print('error 4')
                         elif type(element) == str:
                             # 'attributes'
                             if ((resource.grouptype == enum.Grouptypes.RG) and
@@ -466,6 +484,7 @@ class HotFile:
                 else:
                     # element format can be only string
                     next_state = enum.GetAttrStates.ERROR
+                    #print("error 5")
 
             # If second element is output name, resolve it
             elif cur_state == enum.GetAttrStates.OUTPUT_NAME:
@@ -480,9 +499,21 @@ class HotFile:
                 # Output name not found
                 if not found:
                     next_state = enum.GetAttrStates.ERROR
+                    print('error 6')
                 else:
+                    # If value is a get_
+                    if ((type(value) == dict) and (len(value) == 1) and
+                        ('get_' in value.keys()[0])):
+                        value = resource.child.resolve_nested(value, name)
+
+                        if value is None:
+                            next_state = enum.GetAttrStates.ERROR
+                            #print("error 7", hierarchy, "ele", element)
+                            continue
+
                     index = index + 1
                     next_state = enum.GetAttrStates.OUTPUT_RESOLUTION
+                        
 
             # Rest of hierarchy
             elif cur_state == enum.GetAttrStates.OUTPUT_RESOLUTION:
@@ -499,6 +530,7 @@ class HotFile:
 
                 if element is None:
                     next_state = enum.GetAttrStates.ERROR
+                    #print('error 9')
 
                 elif ((type(element) == str) and (type(value) == dict) and
                       (element in value.keys())):
@@ -515,6 +547,7 @@ class HotFile:
                 else:
                     # element can only be string or digit
                     next_state = enum.GetAttrStates.ERROR
+                    #print('error 10')
 
             # resource.<name>
             elif cur_state == enum.GetAttrStates.RESOURCE:
@@ -527,6 +560,7 @@ class HotFile:
                 # TODO: or can there be smth else?
                 if ((not found) or (len(hierarchy) > (index + 1))):
                     next_state = enum.GetAttrStates.ERROR
+                    print('error 11')
                 else:
                     next_state = enum.GetAttrStates.RESOLVED
 
@@ -558,6 +592,7 @@ class HotFile:
 
                 if element is None:
                     next_state = enum.GetAttrStates.ERROR
+                    #print('error 12')
                 else:
                     next_state = enum.GetAttrStates.OUTPUT_NAME
 

@@ -20,26 +20,28 @@ parameters:
   # ServiceNetMap from overcloud.yaml
   ServiceNetMap:
     default:
-      NeutronTenantNetwork: tenant
+      BlockStorageHostnameResolveNetwork: internal_api
+      CephClusterNetwork: storage_mgmt
+      CephPublicNetwork: storage
+      CephStorageHostnameResolveNetwork: storage
       CinderApiNetwork: internal_api
       CinderIscsiNetwork: storage
+      ComputeHostnameResolveNetwork: internal_api
+      ControllerHostnameResolveNetwork: internal_api
       GlanceApiNetwork: storage
       GlanceRegistryNetwork: internal_api
+      HeatApiNetwork: internal_api
       KeystonePublicApiNetwork: internal_api
       NeutronApiNetwork: internal_api
-      HeatApiNetwork: internal_api
+      NeutronTenantNetwork: tenant
       NovaApiNetwork: internal_api
       NovaMetadataNetwork: internal_api
       NovaVncProxyNetwork: internal_api
+      ObjectStorageHostnameResolveNetwork: internal_api
       SwiftMgmtNetwork: storage_mgmt
       SwiftProxyNetwork: storage
-      CephClusterNetwork: storage_mgmt
-      CephPublicNetwork: storage
-      ControllerHostnameResolveNetwork: internal_api
-      ComputeHostnameResolveNetwork: internal_api
-      BlockStorageHostnameResolveNetwork: internal_api
-      ObjectStorageHostnameResolveNetwork: internal_api
-      CephStorageHostnameResolveNetwork: storage
+      
+      
     type: json
 
   # Used in controller in get_attr
@@ -60,9 +62,9 @@ resources:
       resource_def:
         type: OS::MyTripleO::Controller
         properties:
-          # gets value from 07_netipmap.yaml
-          ServiceMap: {get_param: ServiceNetMap}
           MapNames: {get_param: MapNames}
+          ServiceMap: {get_param: ServiceNetMap}
+          
 
   # Usage of ASG
   Compute:

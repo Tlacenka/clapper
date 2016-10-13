@@ -30,14 +30,13 @@ File 07_controller.yaml
 Parent: tests/test_files/07_root.yaml
 
 Unused parameters:
-- NetworkMap
 - ServiceMap
 
 Status: OK
 
 
 File 07_netipmap.yaml
-Parent: tests/test_files/07_root.yaml
+Parent: 07_controller.yaml
 
 Status: OK
 
@@ -50,5 +49,8 @@ Unused parameters:
 - KeystonePublicApiVirtualIP
 - NovaPublicIP
 - NovaApiHost
+
+Resources without reference:
+- XYZ
 
 Status: OK
