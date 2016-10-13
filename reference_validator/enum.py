@@ -49,16 +49,17 @@ class GetAttrStates:
     ERROR = 2
 
     # Keywords used for ASG, RG, special cases
-    RG_RESOURCE = 3       # 'resource.<number>.<resource name>' used
-    RG_ATTRIBUTES = 4     # 'attributes' keyword used
-    ASG_OUTPUTS_LIST = 5  # 'outputs_list' keyword used
-    ASG_OUTPUTS = 6       # 'outputs' keyword used
-    RESOURCE = 7          # 'resource.<name>' used
+    ASG_RESOURCE = 3      # 'resource.<alnum>.<resource name>' used
+    RG_RESOURCE = 4       # 'resource.<number>.<resource name>' used
+    RG_ATTRIBUTES = 5     # 'attributes' keyword used
+    ASG_OUTPUTS_LIST = 6  # 'outputs_list' keyword used
+    ASG_OUTPUTS = 7       # 'outputs' keyword used
+    RESOURCE = 8          # 'resource.<name>' used
 
     # Usual cases
-    RESOURCE_NAME = 8      # first element is a resource name
-    OUTPUT_NAME  = 9       # second element is an output name
-    OUTPUT_RESOLUTION = 10 # remaining element(s) as string/dictionary/list
+    RESOURCE_NAME = 9      # first element is a resource name
+    OUTPUT_NAME  = 10       # second element is an output name
+    OUTPUT_RESOLUTION = 11 # remaining element(s) as string/dictionary/list
 
 class GetParamStates:
     ''' Main states for initiating and ending FSM. '''

@@ -565,6 +565,7 @@ class HotValidator:
 
         # HOT Files and mappings
         # TODO: Print as DFS, rather going through the tree instead of the list
+        # TODO: Print new line between HOT and mapped HOT
         for hot in [x for x in [self.templates, self.mappings] if len(x)]:
 
             if self.pretty_format:
