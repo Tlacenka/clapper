@@ -35,26 +35,32 @@ class PropertyParameter:
         Each parameter and its corresponding property share one.
     '''
 
-    def __init__(self, structure, isPar):
+    def __init__(self, structure, is_par):
+        ''' structure - internal structure
+            is_par - PropertyParameter object is created either based on
+                     parameter or property
+                     true when passed structure belongs to a parameter
+                     false when passed structure belongs to a property
+        '''
         self.name = structure[0]    # name of parameter/property
         self.used = False           # flag of usage (reference)
         self.type = None            # parameter type
         self.hidden = False         # hidden property (for passwords etc)
 
-        self.value = (None if isPar else structure[1]) # value (possibly structured)
+        self.value = (None if is_par else structure[1]) # value (possibly structured)
         self.default = None         # default value
 
-        if isPar and (structure[1] is not None) and ('type' in structure[1]):
+        if is_par and (structure[1] is not None) and ('type' in structure[1]):
             self.type = structure[1]['type']
 
-        if isPar and (structure[1] is not None) and ('default' in structure[1]):
+        if is_par and (structure[1] is not None) and ('default' in structure[1]):
             self.default = structure[1]['default']
 
-        if isPar and (structure[1] is not None) and ('hidden' in structure[1]):
+        if is_par and (structure[1] is not None) and ('hidden' in structure[1]):
             self.hidden = structure[1]['hidden']
 
     def clone(self):
-        ''' Create a deep copy of the object,
+        ''' Create copy of the object in a new instance but
             mutable objects such as structure are shared.
         '''
         new_propar = PropertyParameter((self.name, None), True)
@@ -109,11 +115,11 @@ class Resource:
 
         self.properties = []                # list of ParProp
 
-        self.isGroup = False # is it a group type
+        self.is_group = False # is it a group type
         self.grouptype = ''
 
-        if self.type in [enum.Grouptypes.ASG, enum.Grouptypes.RG]:
-            self.isGroup = True
+        if self.type in (enum.Grouptypes.ASG, enum.Grouptypes.RG):
+            self.is_group = True
 
         props = []
 
@@ -122,7 +128,7 @@ class Resource:
         if (self.structure is not None) and ('properties' in self.structure):
 
             # Type and properties of the individual resource
-            if self.isGroup:
+            if self.is_group:
                 self.grouptype = self.type
 
                 if ((self.grouptype == enum.Grouptypes.ASG) and

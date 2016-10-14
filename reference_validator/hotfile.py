@@ -74,7 +74,8 @@ class HotFile:
             print('File ' + self.path + ' could not be opened.', file=sys.stderr)
             sys.exit(1)
         except Exception as err:
-            print('ERROR in file ' + self.path + ': ' + str(err), file=sys.stderr)
+            print('ERROR invalid YAML format in file ' + self.path +
+                  ': ' + str(err), file=sys.stderr)
             sys.exit(1)
 
         # Empty file
@@ -220,7 +221,7 @@ class HotFile:
             elif cur_state == enum.GetParamStates.PARAM_NAME:
                 if type(hierarchy) == str:
                     # Resolve pseudo parameters
-                    if hierarchy in ['OS::stack_name', 'OS::stack_id', 'OS::project_id']:
+                    if hierarchy in ('OS::stack_name', 'OS::stack_id', 'OS::project_id'):
                         next_state = enum.GetParamStates.RESOLVED
                         continue
                     else:
@@ -256,7 +257,7 @@ class HotFile:
 
                 # If property has a get_ value and has a parent
                 if ((type(parameter.value) == dict) and (len(parameter.value) == 1) and
-                    ('get_' in parameter.value.keys()[0])):
+                    ('get_' in list(parameter.value.keys())[0])):
                     if isinstance(self.parent, HotFile):
                         tmp = self.parent.resolve_nested(parameter.value, name)
                     else:
@@ -492,7 +493,7 @@ class HotFile:
                 else:
                     # If value is a get_
                     if ((type(value) == dict) and (len(value) == 1) and
-                        ('get_' in value.keys()[0])):
+                        ('get_' in list(value.keys())[0])):
                         value = resource.child.resolve_nested(value, name)
 
                         if value is None:
@@ -550,8 +551,8 @@ class HotFile:
                     next_state = enum.GetAttrStates.RESOLVED
 
             # resource.<number>(.<output>)
-            elif (cur_state in [enum.GetAttrStates.RG_RESOURCE,
-                                enum.GetAttrStates.ASG_RESOURCE]):
+            elif (cur_state in (enum.GetAttrStates.RG_RESOURCE,
+                                enum.GetAttrStates.ASG_RESOURCE)):
 
                 # TODO can there be something after this? Current assumption is 'no'.
                 if len(element) == 3:
@@ -564,9 +565,9 @@ class HotFile:
             # 'attributes' or 'outputs' or 'outputs_list'
             # TODO: are these cases for any input any different?
             #       if not, make one case for all
-            elif (cur_state in [enum.GetAttrStates.RG_ATTRIBUTES,
+            elif (cur_state in (enum.GetAttrStates.RG_ATTRIBUTES,
                                 enum.GetAttrStates.ASG_OUTPUTS,
-                                enum.GetAttrStates.ASG_OUTPUTS_LIST]):
+                                enum.GetAttrStates.ASG_OUTPUTS_LIST)):
                 # Can it end here? Assumption - 'yes'
                 if index >= len(hierarchy):
                     next_state = enum.GetAttrStates.RESOLVED
@@ -592,8 +593,8 @@ class HotFile:
 
         if len(nested_element) == 1:
             # Resolve nested element
-            return self.classify_items(nested_element.keys()[0],
-                    nested_element.values()[0], name)
+            return self.classify_items(list(nested_element.keys())[0],
+                    list(nested_element.values())[0], name)
         else:
             # Not a get_function format
             return None

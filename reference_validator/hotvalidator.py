@@ -487,11 +487,44 @@ class HotValidator:
         # Validate references
         self.validate_references(self.templates[0])
 
+        # Basic duplicate invalid references removal
+        #self.remove_duplicates(self.templates[0])
+
         if self.print_nyan:
             progress.task_done()
             time.sleep(self.sleep_time)
             progress.finish()
 
+
+    #def remove_duplicates(self, root):
+        #''' Go through invalid references, remove duplicates. '''
+
+        ## TODO: optimize
+        #if len(root.invalid) > 0:
+
+            #tmp = root.invalid[0] # invalid references to be compared
+            #list_len = len(root.invalid) # list length
+            #i = 1 # iterating value
+
+            #while i < list_len:
+                ## Find duplicate
+                #if ((tmp.referent == root.invalid[i].referent) and
+                    #(tmp.element == root.invalid[i].element) and
+                    #(tmp.type == root.invalid[i].type) and
+                    #(tmp.parent == root.invalid[i].parent)):
+
+                    ## Remove it
+                    #root.invalid.remove(root.invalid[i])
+                    #list_len = list_len - 1
+                #else:
+                    ## Only increment if current element has not been removed
+                    #i = i + 1
+                
+
+        ## Continue with children
+        #for r in root.resources:
+            #if r.child is not None:
+                #self.remove_duplicates(r.child)
 
     def print_output(self):
         ''' Print results of validation for all files + additional info. '''
@@ -678,7 +711,7 @@ class HotValidator:
                     print('')
 
                 # Unused parameters
-                if False in [x.used for x in node.params]:
+                if not all(x.used for x in node.params):
                     if self.pretty_format:
                         print(enum.Fonts.BOLD +  'Unused parameters:' + enum.Fonts.DEFAULT)
                     else:
@@ -693,7 +726,7 @@ class HotValidator:
                     print('')
 
                 # Print hidden parameters (optional)
-                if (self.print_unused) and [True for x in node.params if x.hidden]:
+                if (self.print_unused) and any(x.hidden for x in node.params):
                     if (self.pretty_format):
                         print(enum.Fonts.BOLD + 'Hidden parameters:' +
                               enum.Fonts.DEFAULT)
@@ -709,7 +742,7 @@ class HotValidator:
                     print('')
 
                 # Print unused resources (optional)
-                if (self.print_unused) and [True for x in node.resources if not x.used]:
+                if (self.print_unused) and not all(x.used for x in node.resources):
                     if (self.pretty_format):
                         print(enum.Fonts.BOLD + 'Resources without reference:' +
                               enum.Fonts.DEFAULT)
