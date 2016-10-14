@@ -1,0 +1,60 @@
+Environments:
+Total: 2
+
+File tests/test_files/07_env1.yaml
+
+Status: OK
+
+
+
+File tests/test_files/07_env2.yaml
+
+Status: OK
+
+
+
+HOT Files:
+Total: 1
+
+File tests/test_files/07_root.yaml
+Parent: None (root)
+
+Invalid references:
+Instance attributes referred by get_attr in wrong_grouptype - output of Compute is not declared.
+Instance no_other_structure referred by get_attr in EndpointMap - output of Controller is not declared.
+Instance resource.nonexistent_resource referred by get_attr in EndpointMap - output of Controller is not declared.
+
+Status: FAILED
+Mapped HOT Files:
+Total: 3
+
+File 07_controller.yaml
+Parent: tests/test_files/07_root.yaml
+
+Unused parameters:
+- ServiceMap
+
+Status: OK
+
+
+File 07_netipmap.yaml
+Parent: 07_controller.yaml
+
+Status: OK
+
+
+File 07_compute.yaml
+Parent: tests/test_files/07_root.yaml
+
+Invalid references:
+Parameter nonexistent_api referred in NovaServer is not declared.
+
+Unused parameters:
+- NovaApiHost
+- GlanceHost
+- KeystonePublicApiVirtualIP
+
+Resources without reference:
+- NovaServer
+
+Status: FAILED

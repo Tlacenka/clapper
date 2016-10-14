@@ -21,28 +21,30 @@ VERBOSE=false # prints diff if test failed
 
 LOG_DIR=tests/test_logs
 DIFF_DIR=tests/test_diffs
+PYTHON=python
+PYTHON3=python3
 
 # Load tests
 TEST01=("Test 1 - Parsing valid YAML file:" \
-        "sudo python reference_validator.py -f tests/test_files/01_root.yaml -u")
+        "reference_validator.py -f tests/test_files/01_root.yaml -u")
 
 TEST02=("Test 2 - Parsing invalid YAML file:" \
-        "sudo python reference_validator.py -f tests/test_files/02_root.yaml -u")
+        "reference_validator.py -f tests/test_files/02_root.yaml -u")
 
 TEST03=("Test 3 - Parsing valid HOT with missing section structure:" \
-        "sudo python reference_validator.py -f tests/test_files/03_root.yaml -e tests/test_files/03_env.yaml -u")
+        "reference_validator.py -f tests/test_files/03_root.yaml -e tests/test_files/03_env.yaml -u")
 
 TEST04=("Test 4 - Parsing valid HOT with missing instance structure:" \
-        "sudo python reference_validator.py -f tests/test_files/04_root.yaml -u")
+        "reference_validator.py -f tests/test_files/04_root.yaml -u")
 
 TEST05=("Test 5 - Parsing valid HOT with missing instance property structure:" \
-        "sudo python reference_validator.py -f tests/test_files/05_root.yaml -u")
+        "reference_validator.py -f tests/test_files/05_root.yaml -u")
 
 TEST06=("Test 6 - Basic HOT resolution:" \
-        "sudo python reference_validator.py -f tests/test_files/06_root.yaml -e tests/test_files/06_env.yaml -u")
+        "reference_validator.py -f tests/test_files/06_root.yaml -e tests/test_files/06_env.yaml -u")
 
 TEST07=("Test 7 - Advanced HOT resolution:" \
-        "sudo python reference_validator.py -f tests/test_files/07_root.yaml -e tests/test_files/07_env1.yaml -e tests/test_files/07_env2.yaml -u")
+        "reference_validator.py -f tests/test_files/07_root.yaml -e tests/test_files/07_env1.yaml -e tests/test_files/07_env2.yaml -u")
 
 TESTS=("${TEST01[@]}" "${TEST02[@]}" "${TEST03[@]}" "${TEST04[@]}")
 TESTS+=("${TEST05[@]}" "${TEST06[@]}" "${TEST07[@]}")
@@ -53,10 +55,10 @@ TESTS_NR=`expr ${#TESTS[@]} / $ELEMENTS`
 function run_test() {
 
     # Run command - both stderr and stdout go to the same log file
-    ${2} >$LOG_DIR/${3}.log 2>&1
+    ${4} ${2} >$LOG_DIR/${3}.${4}.log 2>&1
 
     # Diff log and expected log
-    OUTPUT=`diff $LOG_DIR/${3}.log $DIFF_DIR/${3}.diff`
+    OUTPUT=`diff $LOG_DIR/${3}.${4}.log $DIFF_DIR/${3}.${4}.diff`
 
     # Print result
     if [[ -z "$OUTPUT" ]]; then
@@ -101,12 +103,20 @@ do
 done
 
 # Run tests in loop
-printf "${BOLD}Running YAML reference validator tests${DEFAULT}\n"
+printf "${BOLD}Running YAML reference validator tests for python${DEFAULT}\n"
 
 # Add zero padding
 for T in $(seq -f "%02g" 1 $TESTS_NR)
 do
-   run_test "${TESTS[@]:$(( (T - 1) * ELEMENTS )):$ELEMENTS}" $T
+   run_test "${TESTS[@]:$(( (T - 1) * ELEMENTS )):$ELEMENTS}" $T $PYTHON
+done
+
+printf "${BOLD}Running YAML reference validator tests for python 3${DEFAULT}\n"
+
+# Add zero padding
+for T in $(seq -f "%02g" 1 $TESTS_NR)
+do
+   run_test "${TESTS[@]:$(( (T - 1) * ELEMENTS )):$ELEMENTS}" $T $PYTHON3
 done
 
 # Remove log files if -c is set

@@ -1,0 +1,15 @@
+HOT Files:
+Total: 1
+
+File tests/test_files/05_root.yaml
+Parent: None (root)
+
+Unused parameters:
+- parameter1
+
+Resources without reference:
+- resourceASG
+- resource1
+- resourceRG
+
+Status: OK

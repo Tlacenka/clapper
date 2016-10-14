@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # File: 03_root.yaml
 # Brief: Test nr. 3 - Parsing valid HOT
 #        Section structure is missing

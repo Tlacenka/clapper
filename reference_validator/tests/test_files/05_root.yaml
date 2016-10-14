@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # File: 05_root.yaml
 # Brief: Test nr. 5 - Parsing valid HOT
 #        Instance property structure is missing
