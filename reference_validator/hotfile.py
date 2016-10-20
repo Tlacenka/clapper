@@ -135,6 +135,9 @@ class HotFile:
         # Check dependencies
         self.depends_on()
 
+        # Sort invalid messages, remove duplicates
+        self.sort_out_invalid()
+
         # Remove node from current nodes after validation
         curr_nodes.remove(self)
 
@@ -599,6 +602,29 @@ class HotFile:
             # Not a get_function format
             return None
 
+
+    def sort_out_invalid(self):
+        ''' Sort invalid references, remove duplicates
+        '''
+
+        sorted_i = 0 # first index after sorted field
+        tmp = None
+
+        # Sort by ErrorType
+        for err_type in range(1, 9):
+            for i in range(sorted_i, len(self.invalid)):
+                # Move element at the end of sorted area
+                if self.invalid[i].type == err_type:
+                    tmp = self.invalid[i]
+                    self.invalid.remove(tmp)
+                    self.invalid.insert(sorted_i, tmp)
+                    sorted_i = sorted_i + 1
+            # Whole list is sorted
+            if sorted_i == len(self.invalid):
+                break
+
+        # TODO: Sort alphabetically within sublists
+        # TODO: Remove duplicates - both identical and semantic
 
     def check_prop_par(self, parent, resource, environments):
         ''' Check properties against parameters and vice versa, tag used. '''

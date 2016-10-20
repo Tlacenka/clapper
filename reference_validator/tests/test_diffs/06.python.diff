@@ -18,8 +18,8 @@ Parent: None (root)
 
 Invalid references:
 Resource NonExistingResource referred in controller is not declared.
-Instance 1 referred by get_attr in controller_network - output of Controller is not declared.
 Parameter NonExistingParameter referred in Controller is not declared.
+Instance 1 referred by get_attr in controller_network - output of Controller is not declared.
 
 Unused parameters:
 - Hostname
@@ -33,9 +33,9 @@ File 06_controller.yaml
 Parent: tests/test_files/06_root.yaml
 
 Invalid references:
-Property ForeverAloneProperty has no corresponding parameter in 06_controller.yaml.
-Parameter ForeverAloneParameter has no corresponding default or property in Controller in tests/test_files/06_root.yaml.
 Parameter NonExistingNetwork referred in non-existing-network is not declared.
+Parameter ForeverAloneParameter has no corresponding default or property in Controller in tests/test_files/06_root.yaml.
+Property ForeverAloneProperty has no corresponding parameter in 06_controller.yaml.
 Resource NonExistingResource that resource Controller depends on is not declared.
 
 Unused parameters:
