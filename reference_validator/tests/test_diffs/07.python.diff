@@ -50,9 +50,9 @@ Invalid references:
 Parameter nonexistent_api referred in NovaServer is not declared.
 
 Unused parameters:
-- NovaApiHost
 - GlanceHost
 - KeystonePublicApiVirtualIP
+- NovaApiHost
 
 Resources without reference:
 - NovaServer

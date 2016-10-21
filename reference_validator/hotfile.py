@@ -84,15 +84,15 @@ class HotFile:
 
         # Save all parameters names, resources and properties
         if ('parameters' in self.structure) and (self.structure['parameters'] is not None):
-            for param in self.structure['parameters'].items():
+            for param in sorted(self.structure['parameters'].items()):
                 self.params.append(hotclasses.PropertyParameter(param, True))
 
         if ('resources' in self.structure) and (self.structure['resources'] is not None):
-            for key, value in six.iteritems(self.structure['resources']):
+            for key, value in sorted(six.iteritems(self.structure['resources'])):
                 self.resources.append(hotclasses.Resource(key, value, self))
 
         if ('outputs' in self.structure) and (self.structure['outputs'] is not None):
-            for key, value in six.iteritems(self.structure['outputs']):
+            for key, value in sorted(six.iteritems(self.structure['outputs'])):
                 self.outputs[key] = value
 
         # Examine children nodes to get the full information about references
@@ -616,8 +616,13 @@ class HotFile:
                 # Move element at the end of sorted area
                 if self.invalid[i].type == err_type:
                     tmp = self.invalid[i]
-                    self.invalid.remove(tmp)
-                    self.invalid.insert(sorted_i, tmp)
+
+                    # Sort it by alphabetical order
+                    for j in range(self.find_index(tmp.type), sorted_i):
+                        if tmp.referent < self.invalid[j].referent:
+                            self.invalid.remove(tmp)
+                            self.invalid.insert(j, tmp)
+                    
                     sorted_i = sorted_i + 1
             # Whole list is sorted
             if sorted_i == len(self.invalid):
@@ -625,6 +630,13 @@ class HotFile:
 
         # TODO: Sort alphabetically within sublists
         # TODO: Remove duplicates - both identical and semantic
+
+    def find_index(self, err_type):
+        ''' Find index of first element with error type err_type. '''
+
+        for i in range(0, len(self.invalid)):
+            if self.invalid[i].type == err_type:
+                return i
 
     def check_prop_par(self, parent, resource, environments):
         ''' Check properties against parameters and vice versa, tag used. '''

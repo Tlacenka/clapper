@@ -8,8 +8,8 @@ Unused parameters:
 - parameter1
 
 Resources without reference:
-- resourceASG
 - resource1
+- resourceASG
 - resourceRG
 
 Status: OK
